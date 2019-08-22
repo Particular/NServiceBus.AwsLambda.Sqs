@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29020.237
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NServiceBus.AwsLambda", "NServiceBus.AwsLambda\NServiceBus.AwsLambda.csproj", "{14098F94-976E-44F4-8386-3497EA586584}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{14098F94-976E-44F4-8386-3497EA586584}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14098F94-976E-44F4-8386-3497EA586584}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14098F94-976E-44F4-8386-3497EA586584}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14098F94-976E-44F4-8386-3497EA586584}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D24A8384-FD1A-417D-AE22-B2C13E96E5DE}
+	EndGlobalSection
+EndGlobal
