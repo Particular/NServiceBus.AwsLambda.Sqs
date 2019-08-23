@@ -8,8 +8,9 @@
   <ItemGroup>
     <PackageReference Include="Amazon.Lambda.Core" Version="1.1.0" />
     <PackageReference Include="Amazon.Lambda.SQSEvents" Version="1.1.0" />
-    <PackageReference Include="NServiceBus" Version="7.1.10" />
-    <PackageReference Include="NServiceBus.AmazonSQS" Version="4.3.4" />
+    <PackageReference Include="AWSSDK.S3" Version="3.3.104.18" />
+    <PackageReference Include="AWSSDK.SQS" Version="3.3.101.1" />
+    <PackageReference Include="NServiceBus.Serverless" Version="0.1.0-alpha0044" />
   </ItemGroup>
 
 </Project>
