@@ -12,6 +12,8 @@ using NServiceBus.Transport;
 namespace NServiceBus
 {
     using Amazon.S3;
+    using Amazon.SQS;
+    using Amazon.SQS.Model;
     using Logging;
 
     public static class ServerlessEndpointExtensions
@@ -22,18 +24,20 @@ namespace NServiceBus
         {
             var processTasks = new List<Task>();
 
+            string queueUrl = null;
+            IAmazonSQS sqsClient = null;
             IAmazonS3 s3Client = null; 
             TransportConfiguration configuration = null;
-            CancellationToken token;
+            var token = CancellationToken.None;
 
             foreach (var receivedMessage in @event.Records)
             {
-                processTasks.Add(ProcessMessage(endpoint, receivedMessage, lambdaContext, s3Client, configuration, token));
+                processTasks.Add(ProcessMessage(endpoint, receivedMessage, lambdaContext, sqsClient, queueUrl, s3Client, configuration, token));
             }
             return Task.WhenAll(processTasks);
         }
 
-        static async Task ProcessMessage(ServerlessEndpoint<ILambdaContext> endpoint, SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, IAmazonS3 s3Client, TransportConfiguration configuration, CancellationToken token)
+        static async Task ProcessMessage(ServerlessEndpoint<ILambdaContext> endpoint, SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, IAmazonSQS sqsClient, string queueUrl, IAmazonS3 s3Client, TransportConfiguration configuration, CancellationToken token)
         {
             byte[] messageBody = null;
             TransportMessage transportMessage = null;
@@ -87,19 +91,34 @@ namespace NServiceBus
             // Always delete the message from the queue.
             // If processing failed, the onError handler will have moved the message
             // to a retry queue.
-            await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey).ConfigureAwait(false);
+            await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey, sqsClient, queueUrl).ConfigureAwait(false);
 
         }
 
-        static Task DeleteMessageAndBodyIfRequired(SQSEvent.SQSMessage receivedMessage, string transportMessageS3BodyKey)
+        static async Task DeleteMessageAndBodyIfRequired(SQSEvent.SQSMessage message, string messageS3BodyKey, IAmazonSQS sqsClient, string queueUrl)
         {
-            throw new NotImplementedException();
+            try
+            {
+                // should not be cancelled
+                await sqsClient.DeleteMessageAsync(queueUrl, message.ReceiptHandle, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (ReceiptHandleIsInvalidException ex)
+            {
+                Logger.Info($"Message receipt handle {message.ReceiptHandle} no longer valid.", ex);
+                return; // if another receiver fetches the data from S3
+            }
+
+            if (!string.IsNullOrEmpty(messageS3BodyKey))
+            {
+                Logger.Info($"Message body data with key '{messageS3BodyKey}' will be aged out by the S3 lifecycle policy when the TTL expires.");
+            }
+
         }
 
 
         static Task MovePoisonMessageToErrorQueue(SQSEvent.SQSMessage receivedMessage, string messageId)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException();// move to error is the sqs transport behaviour, but we don't have access to the error queue. Need to decide what to do here.
         }
 
         static void LogPoisonMessage(string messageId, Exception exception)
