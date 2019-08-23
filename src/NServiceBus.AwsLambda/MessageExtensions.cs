@@ -13,7 +13,7 @@
     {
         public static async Task<byte[]> RetrieveBody(this TransportMessage transportMessage,
             IAmazonS3 s3Client,
-            TransportConfiguration transportConfiguration,
+            string s3BucketForLargeMessages,
             CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(transportMessage.S3BodyKey))
@@ -21,7 +21,7 @@
                 return Convert.FromBase64String(transportMessage.Body);
             }
 
-            var s3GetResponse = await s3Client.GetObjectAsync(transportConfiguration.S3BucketForLargeMessages,
+            var s3GetResponse = await s3Client.GetObjectAsync(s3BucketForLargeMessages,
                 transportMessage.S3BodyKey,
                 cancellationToken).ConfigureAwait(false);
 

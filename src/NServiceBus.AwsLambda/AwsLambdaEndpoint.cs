@@ -16,28 +16,29 @@ namespace NServiceBus
     using Amazon.SQS.Model;
     using Logging;
 
-    public static class ServerlessEndpointExtensions
+    public class AwsLambdaEndpoint : ServerlessEndpoint<ILambdaContext>
     {
-        static readonly TransportTransaction transportTransaction = new TransportTransaction();
-
-        public static Task Process(this ServerlessEndpoint<ILambdaContext> endpoint, SQSEvent @event, ILambdaContext lambdaContext)
+        public AwsLambdaEndpoint(Func<ILambdaContext, ServerlessEndpointConfiguration> configurationFactory) : base(configurationFactory)
+        {
+            sqsClient = null;
+            queueUrl = null;
+            s3Client = null;
+            s3BucketForLargeMessages = null;
+        }
+        
+        public Task Process(SQSEvent @event, ILambdaContext lambdaContext)
         {
             var processTasks = new List<Task>();
 
-            string queueUrl = null;
-            IAmazonSQS sqsClient = null;
-            IAmazonS3 s3Client = null; 
-            TransportConfiguration configuration = null;
-            var token = CancellationToken.None;
-
             foreach (var receivedMessage in @event.Records)
             {
-                processTasks.Add(ProcessMessage(endpoint, receivedMessage, lambdaContext, sqsClient, queueUrl, s3Client, configuration, token));
+                processTasks.Add(ProcessMessage(receivedMessage, lambdaContext, CancellationToken.None));
             }
+
             return Task.WhenAll(processTasks);
         }
 
-        static async Task ProcessMessage(ServerlessEndpoint<ILambdaContext> endpoint, SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, IAmazonSQS sqsClient, string queueUrl, IAmazonS3 s3Client, TransportConfiguration configuration, CancellationToken token)
+        async Task ProcessMessage(SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
             byte[] messageBody = null;
             TransportMessage transportMessage = null;
@@ -51,7 +52,7 @@ namespace NServiceBus
 
                 transportMessage = SimpleJson.SimpleJson.DeserializeObject<TransportMessage>(receivedMessage.Body);
 
-                messageBody = await transportMessage.RetrieveBody(s3Client, configuration, token).ConfigureAwait(false);
+                messageBody = await transportMessage.RetrieveBody(s3Client, s3BucketForLargeMessages, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -72,7 +73,7 @@ namespace NServiceBus
                 return;
             }
 
-            var clockSkew = TimeSpan.Zero;//CorrectClockSkew.GetClockCorrectionForEndpoint(awsEndpointUrl);
+            var clockSkew = TimeSpan.Zero; //CorrectClockSkew.GetClockCorrectionForEndpoint(awsEndpointUrl);
             if (receivedMessage.IsMessageExpired(transportMessage.Headers, clockSkew))
             {
                 return;
@@ -86,16 +87,16 @@ namespace NServiceBus
                 new CancellationTokenSource(),
                 new ContextBag());
 
-            await endpoint.Process(messageContext, lambdaContext).ConfigureAwait(false);
+            await Process(messageContext, lambdaContext).ConfigureAwait(false);
 
             // Always delete the message from the queue.
             // If processing failed, the onError handler will have moved the message
             // to a retry queue.
-            await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey, sqsClient, queueUrl).ConfigureAwait(false);
+            await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey).ConfigureAwait(false);
 
         }
 
-        static async Task DeleteMessageAndBodyIfRequired(SQSEvent.SQSMessage message, string messageS3BodyKey, IAmazonSQS sqsClient, string queueUrl)
+        async Task DeleteMessageAndBodyIfRequired(SQSEvent.SQSMessage message, string messageS3BodyKey)
         {
             try
             {
@@ -115,10 +116,9 @@ namespace NServiceBus
 
         }
 
-
         static Task MovePoisonMessageToErrorQueue(SQSEvent.SQSMessage receivedMessage, string messageId)
         {
-            throw new NotImplementedException();// move to error is the sqs transport behaviour, but we don't have access to the error queue. Need to decide what to do here.
+            throw new NotImplementedException(); // move to error is the sqs transport behaviour, but we don't have access to the error queue. Need to decide what to do here.
         }
 
         static void LogPoisonMessage(string messageId, Exception exception)
@@ -135,6 +135,11 @@ namespace NServiceBus
             }
         }
 
-        static ILog Logger = LogManager.GetLogger(typeof(ServerlessEndpointExtensions));
+        static ILog Logger = LogManager.GetLogger(typeof(AwsLambdaEndpoint));
+        static readonly TransportTransaction transportTransaction = new TransportTransaction();
+        IAmazonSQS sqsClient;
+        IAmazonS3 s3Client;
+        string s3BucketForLargeMessages;
+        string queueUrl;
     }
 }
