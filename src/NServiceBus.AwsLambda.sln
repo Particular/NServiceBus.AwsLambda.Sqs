@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29020.237
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NServiceBus.AwsLambda", "NServiceBus.AwsLambda\NServiceBus.AwsLambda.csproj", "{14098F94-976E-44F4-8386-3497EA586584}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NServiceBus.AwsLambda.SQS", "NServiceBus.AwsLambda.SQS\NServiceBus.AwsLambda.SQS.csproj", "{14098F94-976E-44F4-8386-3497EA586584}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NServiceBus.AwsLambda.Tests", "NServiceBus.AwsLambda.Tests\NServiceBus.AwsLambda.Tests.csproj", "{61ABD986-4C43-43DC-BD4C-773616E52E55}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NServiceBus.AwsLambda.SQS.Tests", "NServiceBus.AwsLambda.SQS.Tests\NServiceBus.AwsLambda.SQS.Tests.csproj", "{61ABD986-4C43-43DC-BD4C-773616E52E55}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
