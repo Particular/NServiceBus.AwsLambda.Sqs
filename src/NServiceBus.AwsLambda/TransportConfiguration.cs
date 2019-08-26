@@ -19,6 +19,7 @@
                 {
                     s3BucketForLargeMessages = settings.GetOrDefault<string>(SettingsKeys.S3BucketForLargeMessages);
                 }
+
                 return s3BucketForLargeMessages;
             }
         }

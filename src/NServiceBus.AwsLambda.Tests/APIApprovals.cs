@@ -10,7 +10,7 @@
         [Test]
         public void Approve()
         {
-            var publicApi = ApiGenerator.GeneratePublicApi(typeof(AwsLambdaEndpoint).Assembly, excludeAttributes: new[] { "System.Runtime.Versioning.TargetFrameworkAttribute" });
+            var publicApi = ApiGenerator.GeneratePublicApi(typeof(AwsLambdaEndpoint).Assembly, excludeAttributes: new[] {"System.Runtime.Versioning.TargetFrameworkAttribute"});
             Approver.Verify(publicApi);
         }
     }

@@ -55,7 +55,7 @@
             {
                 return false;
             }
-            
+
             var sentDateTime = receivedMessage.GetAdjustedDateTimeFromServerSetAttributes(clockSkew);
 
             var expiresAt = sentDateTime + timeToBeReceived;
@@ -75,7 +75,7 @@
             // https://aws.amazon.com/blogs/developer/clock-skew-correction/
             return result + clockOffset;
         }
-        
+
         static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     }
 }

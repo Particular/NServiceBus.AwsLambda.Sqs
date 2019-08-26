@@ -1,20 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using Amazon.Lambda.Core;
-using Amazon.Lambda.SQSEvents;
-using NServiceBus.AwsLambda;
-using NServiceBus.Extensibility;
-using NServiceBus.Serverless;
-using NServiceBus.Transport;
-
-namespace NServiceBus
+﻿namespace NServiceBus
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Amazon.Lambda.Core;
+    using Amazon.Lambda.SQSEvents;
     using Amazon.S3;
     using Amazon.SQS;
     using Amazon.SQS.Model;
+    using AwsLambda;
+    using Extensibility;
     using Logging;
+    using Serverless;
+    using SimpleJson;
+    using Transport;
 
     public class AwsLambdaEndpoint : ServerlessEndpoint<ILambdaContext>
     {
@@ -25,7 +25,7 @@ namespace NServiceBus
             s3Client = null;
             s3BucketForLargeMessages = null;
         }
-        
+
         public Task Process(SQSEvent @event, ILambdaContext lambdaContext)
         {
             var processTasks = new List<Task>();
@@ -50,7 +50,7 @@ namespace NServiceBus
             {
                 messageId = receivedMessage.GetMessageId();
 
-                transportMessage = SimpleJson.SimpleJson.DeserializeObject<TransportMessage>(receivedMessage.Body);
+                transportMessage = SimpleJson.DeserializeObject<TransportMessage>(receivedMessage.Body);
 
                 messageBody = await transportMessage.RetrieveBody(s3Client, s3BucketForLargeMessages, token).ConfigureAwait(false);
             }
@@ -93,7 +93,6 @@ namespace NServiceBus
             // If processing failed, the onError handler will have moved the message
             // to a retry queue.
             await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey).ConfigureAwait(false);
-
         }
 
         async Task DeleteMessageAndBodyIfRequired(SQSEvent.SQSMessage message, string messageS3BodyKey)
@@ -113,7 +112,6 @@ namespace NServiceBus
             {
                 Logger.Info($"Message body data with key '{messageS3BodyKey}' will be aged out by the S3 lifecycle policy when the TTL expires.");
             }
-
         }
 
         static Task MovePoisonMessageToErrorQueue(SQSEvent.SQSMessage receivedMessage, string messageId)
@@ -135,11 +133,12 @@ namespace NServiceBus
             }
         }
 
-        static ILog Logger = LogManager.GetLogger(typeof(AwsLambdaEndpoint));
-        static readonly TransportTransaction transportTransaction = new TransportTransaction();
         IAmazonSQS sqsClient;
         IAmazonS3 s3Client;
         string s3BucketForLargeMessages;
         string queueUrl;
+
+        static ILog Logger = LogManager.GetLogger(typeof(AwsLambdaEndpoint));
+        static readonly TransportTransaction transportTransaction = new TransportTransaction();
     }
 }
