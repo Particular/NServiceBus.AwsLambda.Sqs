@@ -1,0 +1,12 @@
+namespace NServiceBus
+{
+    public class AwsLambdaEndpoint : NServiceBus.Serverless.ServerlessEndpoint<Amazon.Lambda.Core.ILambdaContext>
+    {
+        public AwsLambdaEndpoint(System.Func<Amazon.Lambda.Core.ILambdaContext, NServiceBus.Serverless.ServerlessEndpointConfiguration> configurationFactory) { }
+        public System.Threading.Tasks.Task Process(Amazon.Lambda.SQSEvents.SQSEvent @event, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
+    }
+    public class SQSTriggeredEndpointConfiguration : NServiceBus.Serverless.ServerlessEndpointConfiguration
+    {
+        public SQSTriggeredEndpointConfiguration(string endpointName) { }
+    }
+}
