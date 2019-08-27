@@ -16,14 +16,10 @@
     using SimpleJson;
     using Transport;
 
-    public class AwsLambdaEndpoint : ServerlessEndpoint<ILambdaContext>
+    public class AwsLambdaSQSEndpoint : ServerlessEndpoint<ILambdaContext, SQSTriggeredEndpointConfiguration>
     {
-        public AwsLambdaEndpoint(Func<ILambdaContext, ServerlessEndpointConfiguration> configurationFactory) : base(configurationFactory)
+        public AwsLambdaSQSEndpoint(Func<ILambdaContext, SQSTriggeredEndpointConfiguration> configurationFactory) : base(configurationFactory)
         {
-            sqsClient = null;
-            queueUrl = null;
-            s3Client = null;
-            s3BucketForLargeMessages = null;
         }
 
         public Task Process(SQSEvent @event, ILambdaContext lambdaContext)
@@ -38,8 +34,26 @@
             return Task.WhenAll(processTasks);
         }
 
+        void InitializeIfNeeded()
+        {
+
+            if (sqsClient == null)
+            {
+                return;
+            }
+
+            sqsClient = new AmazonSQSClient();
+
+            if (!string.IsNullOrWhiteSpace(Configuration.S3BucketForLargeMessages))
+            {
+                s3Client = new AmazonS3Client();
+            }
+        }
+
         async Task ProcessMessage(SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
+            InitializeIfNeeded();
+
             byte[] messageBody = null;
             TransportMessage transportMessage = null;
             Exception exception = null;
@@ -87,7 +101,22 @@
                 new CancellationTokenSource(),
                 new ContextBag());
 
-            await Process(messageContext, lambdaContext).ConfigureAwait(false);
+            while (true)
+            {
+                try
+                {
+                    await Process(messageContext, lambdaContext).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    var handleResult = await ProcessFailedMessage(messageContext, ex, 0, lambdaContext).ConfigureAwait(false);
+
+                    if (handleResult == ErrorHandleResult.Handled)
+                    {
+                        break;
+                    }
+                }
+            }
 
             // Always delete the message from the queue.
             // If processing failed, the onError handler will have moved the message
@@ -138,7 +167,7 @@
         string s3BucketForLargeMessages;
         string queueUrl;
 
-        static ILog Logger = LogManager.GetLogger(typeof(AwsLambdaEndpoint));
+        static ILog Logger = LogManager.GetLogger(typeof(AwsLambdaSQSEndpoint));
         static readonly TransportTransaction transportTransaction = new TransportTransaction();
     }
 }
