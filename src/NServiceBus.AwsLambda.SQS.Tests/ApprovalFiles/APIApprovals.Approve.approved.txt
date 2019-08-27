@@ -9,6 +9,7 @@ namespace NServiceBus
     public class SQSTriggeredEndpointConfiguration : NServiceBus.Serverless.ServerlessEndpointConfiguration
     {
         public SQSTriggeredEndpointConfiguration(string endpointName) { }
+        public NServiceBus.TransportExtensions<NServiceBus.SqsTransport> Transport { get; }
         public void S3(string bucketForLargeMessages, string keyPrefix) { }
     }
 }
