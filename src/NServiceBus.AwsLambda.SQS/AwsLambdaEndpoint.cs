@@ -17,14 +17,27 @@
     using SimpleJson;
     using Transport;
 
+    /// <summary>
+    /// An NServiceBus endpoint hosted in AWS Lambda which does not receive messages automatically but only handles
+    /// messages explicitly passed to it by the caller.
+    /// </summary>
     public class AwsLambdaSQSEndpoint : ServerlessEndpoint<ILambdaContext, SQSTriggeredEndpointConfiguration>
     {
+        /// <summary>
+        /// Create a new endpoint hosting in AWS Lambda.
+        /// </summary>
         public AwsLambdaSQSEndpoint(Func<ILambdaContext, SQSTriggeredEndpointConfiguration> configurationFactory) : base(configurationFactory)
         {
         }
 
-        public Task Process(SQSEvent @event, ILambdaContext lambdaContext)
+        /// <summary>
+        /// Processes a messages received from an SQS trigger using the NServiceBus message pipeline.
+        /// </summary>
+        public async Task Process(SQSEvent @event, ILambdaContext lambdaContext)
         {
+            // enforce early initialization instead of lazy during process so that the necessary clients can be created.
+            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+
             var processTasks = new List<Task>();
 
             foreach (var receivedMessage in @event.Records)
@@ -32,31 +45,28 @@
                 processTasks.Add(ProcessMessage(receivedMessage, lambdaContext, CancellationToken.None));
             }
 
-            return Task.WhenAll(processTasks);
+            await Task.WhenAll(processTasks).ConfigureAwait(false);
         }
 
-        // TODO: Make this concurrency safe?
-        void InitializeIfNeeded()
+        /// <inheritdoc/>
+        protected override Task Initialize(SQSTriggeredEndpointConfiguration configuration)
         {
-            if (sqsClient != null)
-            {
-                return;
-            }
-
             sqsClient = new AmazonSQSClient();
             awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
 
-            if (!string.IsNullOrWhiteSpace(Configuration.S3BucketForLargeMessages))
+            if (string.IsNullOrWhiteSpace(configuration.S3BucketForLargeMessages))
             {
-                s3Client = new AmazonS3Client();
-                s3BucketForLargeMessages = Configuration.S3BucketForLargeMessages;
+                return Task.CompletedTask;
             }
+
+            s3Client = new AmazonS3Client();
+            s3BucketForLargeMessages = configuration.S3BucketForLargeMessages;
+
+            return Task.CompletedTask;
         }
 
         async Task ProcessMessage(SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
-            InitializeIfNeeded();
-
             byte[] messageBody = null;
             TransportMessage transportMessage = null;
             Exception exception = null;
