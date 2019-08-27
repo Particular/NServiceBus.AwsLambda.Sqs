@@ -3,11 +3,13 @@ namespace NServiceBus
     public class AwsLambdaSQSEndpoint : NServiceBus.Serverless.ServerlessEndpoint<Amazon.Lambda.Core.ILambdaContext, NServiceBus.SQSTriggeredEndpointConfiguration>
     {
         public AwsLambdaSQSEndpoint(System.Func<Amazon.Lambda.Core.ILambdaContext, NServiceBus.SQSTriggeredEndpointConfiguration> configurationFactory) { }
+        protected override System.Threading.Tasks.Task Initialize(NServiceBus.SQSTriggeredEndpointConfiguration configuration) { }
         public System.Threading.Tasks.Task Process(Amazon.Lambda.SQSEvents.SQSEvent @event, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
     }
     public class SQSTriggeredEndpointConfiguration : NServiceBus.Serverless.ServerlessEndpointConfiguration
     {
         public SQSTriggeredEndpointConfiguration(string endpointName) { }
+        public NServiceBus.TransportExtensions<NServiceBus.SqsTransport> Transport { get; }
         public void S3(string bucketForLargeMessages, string keyPrefix) { }
     }
 }
