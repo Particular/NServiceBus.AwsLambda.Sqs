@@ -1,14 +1,9 @@
 ﻿namespace NServiceBus
 {
-    using NServiceBus.AmazonSQS;
     using Serverless;
 
     public class SQSTriggeredEndpointConfiguration : ServerlessEndpointConfiguration
     {
-        private readonly TransportExtensions<SqsTransport> transport;
-
-        internal SQSTransportConfiguration TransportConfiguration { get; }
-
         public SQSTriggeredEndpointConfiguration(string endpointName) : base(endpointName)
         {
             transport = UseTransport<SqsTransport>();
@@ -22,5 +17,7 @@
 
             transport.S3(bucketForLargeMessages, keyPrefix);
         }
+
+        private readonly TransportExtensions<SqsTransport> transport;
     }
 }

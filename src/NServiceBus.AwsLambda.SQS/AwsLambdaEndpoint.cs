@@ -6,6 +6,7 @@
     using System.Threading.Tasks;
     using Amazon.Lambda.Core;
     using Amazon.Lambda.SQSEvents;
+    using Amazon.Runtime;
     using Amazon.S3;
     using Amazon.SQS;
     using Amazon.SQS.Model;
@@ -36,17 +37,18 @@
 
         void InitializeIfNeeded()
         {
-
             if (sqsClient == null)
             {
                 return;
             }
 
             sqsClient = new AmazonSQSClient();
+            awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
 
             if (!string.IsNullOrWhiteSpace(Configuration.S3BucketForLargeMessages))
             {
                 s3Client = new AmazonS3Client();
+                s3BucketForLargeMessages = Configuration.S3BucketForLargeMessages;
             }
         }
 
@@ -57,12 +59,20 @@
             byte[] messageBody = null;
             TransportMessage transportMessage = null;
             Exception exception = null;
+            var nativeMessageId = receivedMessage.MessageId;
             string messageId = null;
             var isPoisonMessage = false;
 
             try
             {
-                messageId = receivedMessage.GetMessageId();
+                if (receivedMessage.MessageAttributes.TryGetValue(Headers.MessageId, out var messageIdAttribute))
+                {
+                    messageId = messageIdAttribute.StringValue;
+                }
+                else
+                {
+                    messageId = nativeMessageId;
+                }
 
                 transportMessage = SimpleJson.DeserializeObject<TransportMessage>(receivedMessage.Body);
 
@@ -87,35 +97,10 @@
                 return;
             }
 
-            var clockSkew = TimeSpan.Zero; //CorrectClockSkew.GetClockCorrectionForEndpoint(awsEndpointUrl);
-            if (receivedMessage.IsMessageExpired(transportMessage.Headers, clockSkew))
+            if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, CorrectClockSkew.GetClockCorrectionForEndpoint(awsEndpointUrl)))
             {
-                return;
-            }
-
-            var messageContext = new MessageContext(
-                receivedMessage.MessageId,
-                transportMessage.Headers,
-                messageBody,
-                transportTransaction,
-                new CancellationTokenSource(),
-                new ContextBag());
-
-            while (true)
-            {
-                try
-                {
-                    await Process(messageContext, lambdaContext).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    var handleResult = await ProcessFailedMessage(messageContext, ex, 0, lambdaContext).ConfigureAwait(false);
-
-                    if (handleResult == ErrorHandleResult.Handled)
-                    {
-                        break;
-                    }
-                }
+                // here we also want to use the native message id because the core demands it like that
+                await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, lambdaContext, token).ConfigureAwait(false);
             }
 
             // Always delete the message from the queue.
@@ -124,12 +109,93 @@
             await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey).ConfigureAwait(false);
         }
 
+        static bool IsMessageExpired(SQSEvent.SQSMessage receivedMessage, Dictionary<string, string> headers, string messageId, TimeSpan clockOffset)
+        {
+            if (!headers.TryGetValue(TransportHeaders.TimeToBeReceived, out var rawTtbr))
+            {
+                return false;
+            }
+
+            headers.Remove(TransportHeaders.TimeToBeReceived);
+            var timeToBeReceived = TimeSpan.Parse(rawTtbr);
+            if (timeToBeReceived == TimeSpan.MaxValue)
+            {
+                return false;
+            }
+
+            var sentDateTime = receivedMessage.GetAdjustedDateTimeFromServerSetAttributes(clockOffset);
+            var expiresAt = sentDateTime + timeToBeReceived;
+            var utcNow = DateTime.UtcNow;
+            if (expiresAt > utcNow)
+            {
+                return false;
+            }
+
+            // Message has expired.
+            Logger.Info($"Discarding expired message with Id {messageId}, expired {utcNow - expiresAt} ago at {expiresAt} utc.");
+            return true;
+        }
+
+        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, byte[] body, ILambdaContext lambdaContext, CancellationToken token)
+        {
+            var immediateProcessingAttempts = 0;
+            var messageProcessedOk = false;
+            var errorHandled = false;
+
+            while (!errorHandled && !messageProcessedOk)
+            {
+                try
+                {
+                    using (var messageContextCancellationTokenSource = new CancellationTokenSource())
+                    {
+                        var messageContext = new MessageContext(
+                            nativeMessageId,
+                            new Dictionary<string, string>(headers),
+                            body,
+                            transportTransaction,
+                            messageContextCancellationTokenSource,
+                            new ContextBag());
+
+                        await Process(messageContext, lambdaContext).ConfigureAwait(false);
+
+                        messageProcessedOk = !messageContextCancellationTokenSource.IsCancellationRequested;
+                    }
+                }
+                catch (Exception ex)
+                    when (!(ex is OperationCanceledException && token.IsCancellationRequested))
+                {
+                    immediateProcessingAttempts++;
+                    ErrorHandleResult errorHandlerResult;
+
+                    try
+                    {
+                        var errorContext = new MessageContext(
+                            nativeMessageId,
+                            new Dictionary<string, string>(headers),
+                            body,
+                            transportTransaction,
+                            new CancellationTokenSource(),
+                            new ContextBag());
+
+                        errorHandlerResult = await ProcessFailedMessage(errorContext, ex, immediateProcessingAttempts, lambdaContext).ConfigureAwait(false);
+                    }
+                    catch (Exception onErrorEx)
+                    {
+                        Logger.Warn($"Failed to execute recoverability policy for message with native ID: `{nativeMessageId}`", onErrorEx);
+                        throw;
+                    }
+
+                    errorHandled = errorHandlerResult == ErrorHandleResult.Handled;
+                }
+            }
+        }
+
         async Task DeleteMessageAndBodyIfRequired(SQSEvent.SQSMessage message, string messageS3BodyKey)
         {
             try
             {
                 // should not be cancelled
-                await sqsClient.DeleteMessageAsync(queueUrl, message.ReceiptHandle, CancellationToken.None).ConfigureAwait(false);
+                await sqsClient.DeleteMessageAsync(awsEndpointUrl, message.ReceiptHandle, CancellationToken.None).ConfigureAwait(false);
             }
             catch (ReceiptHandleIsInvalidException ex)
             {
@@ -165,7 +231,7 @@
         IAmazonSQS sqsClient;
         IAmazonS3 s3Client;
         string s3BucketForLargeMessages;
-        string queueUrl;
+        string awsEndpointUrl;
 
         static ILog Logger = LogManager.GetLogger(typeof(AwsLambdaSQSEndpoint));
         static readonly TransportTransaction transportTransaction = new TransportTransaction();
