@@ -11,6 +11,7 @@
     using Amazon.SQS;
     using Amazon.SQS.Model;
     using AwsLambda;
+    using Configuration.AdvancedExtensibility;
     using Extensibility;
     using Logging;
     using Serverless;
@@ -49,20 +50,19 @@
         }
 
         /// <inheritdoc/>
-        protected override Task Initialize(SQSTriggeredEndpointConfiguration configuration)
+        protected override async Task Initialize(SQSTriggeredEndpointConfiguration configuration)
         {
             sqsClient = new AmazonSQSClient();
             awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
+            queueUrl = (await sqsClient.GetQueueUrlAsync(configuration.AdvancedConfiguration.GetSettings().EndpointName()).ConfigureAwait(false)).QueueUrl;
 
             if (string.IsNullOrWhiteSpace(configuration.S3BucketForLargeMessages))
             {
-                return Task.CompletedTask;
+                return;
             }
 
             s3Client = new AmazonS3Client();
             s3BucketForLargeMessages = configuration.S3BucketForLargeMessages;
-
-            return Task.CompletedTask;
         }
 
         async Task ProcessMessage(SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, CancellationToken token)
@@ -206,7 +206,7 @@
             try
             {
                 // should not be cancelled
-                await sqsClient.DeleteMessageAsync(awsEndpointUrl, message.ReceiptHandle, CancellationToken.None).ConfigureAwait(false);
+                await sqsClient.DeleteMessageAsync(queueUrl, message.ReceiptHandle, CancellationToken.None).ConfigureAwait(false);
             }
             catch (ReceiptHandleIsInvalidException ex)
             {
@@ -243,6 +243,7 @@
         IAmazonS3 s3Client;
         string s3BucketForLargeMessages;
         string awsEndpointUrl;
+        string queueUrl;
 
         static ILog Logger = LogManager.GetLogger(typeof(AwsLambdaSQSEndpoint));
         static readonly TransportTransaction transportTransaction = new TransportTransaction();
