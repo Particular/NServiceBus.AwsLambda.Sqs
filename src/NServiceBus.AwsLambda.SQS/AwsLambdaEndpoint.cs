@@ -169,15 +169,15 @@
 
                     try
                     {
-                        var errorContext = new MessageContext(
-                            nativeMessageId,
+                        var errorContext = new ErrorContext(
+                            ex,
                             new Dictionary<string, string>(headers),
+                            nativeMessageId,
                             body,
                             transportTransaction,
-                            new CancellationTokenSource(),
-                            new ContextBag());
+                            immediateProcessingAttempts);
 
-                        errorHandlerResult = await ProcessFailedMessage(errorContext, ex, immediateProcessingAttempts, lambdaContext).ConfigureAwait(false);
+                        errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext).ConfigureAwait(false);
                     }
                     catch (Exception onErrorEx)
                     {
