@@ -35,9 +35,10 @@
             return Task.WhenAll(processTasks);
         }
 
+        // TODO: Make this concurrency safe?
         void InitializeIfNeeded()
         {
-            if (sqsClient == null)
+            if (sqsClient != null)
             {
                 return;
             }
