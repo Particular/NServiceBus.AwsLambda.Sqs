@@ -97,7 +97,9 @@
             endpointConfiguration.SendOnly();
             endpointConfiguration.UsePersistence<InMemoryPersistence>();
             var transport = endpointConfiguration.UseTransport<SqsTransport>();
-            transport.S3(BucketName, KeyPrefix);
+            transport.ClientFactory(CreateSQSClient);
+            var s3 = transport.S3(BucketName, KeyPrefix);
+            s3.ClientFactory(CreateS3Client);
 
             var endpointInstance = await Endpoint.Start(endpointConfiguration)
                 .ConfigureAwait(false);
