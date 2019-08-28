@@ -119,10 +119,10 @@
                 await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, lambdaContext, token).ConfigureAwait(false);
             }
 
-            // Always delete the message from the queue.
-            // If processing failed, the onError handler will have moved the message
-            // to a retry queue.
-            await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(transportMessage.S3BodyKey))
+            {
+                Logger.Info($"Message body data with key '{transportMessage.S3BodyKey}' will be aged out by the S3 lifecycle policy when the TTL expires.");
+            }
         }
 
         static bool IsMessageExpired(SQSEvent.SQSMessage receivedMessage, Dictionary<string, string> headers, string messageId, TimeSpan clockOffset)
@@ -203,25 +203,6 @@
 
                     errorHandled = errorHandlerResult == ErrorHandleResult.Handled;
                 }
-            }
-        }
-
-        async Task DeleteMessageAndBodyIfRequired(SQSEvent.SQSMessage message, string messageS3BodyKey)
-        {
-            try
-            {
-                // should not be cancelled
-                await sqsClient.DeleteMessageAsync(queueUrl, message.ReceiptHandle, CancellationToken.None).ConfigureAwait(false);
-            }
-            catch (ReceiptHandleIsInvalidException ex)
-            {
-                Logger.Info($"Message receipt handle {message.ReceiptHandle} no longer valid.", ex);
-                return; // if another receiver fetches the data from S3
-            }
-
-            if (!string.IsNullOrEmpty(messageS3BodyKey))
-            {
-                Logger.Info($"Message body data with key '{messageS3BodyKey}' will be aged out by the S3 lifecycle policy when the TTL expires.");
             }
         }
 
