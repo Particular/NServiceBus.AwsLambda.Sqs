@@ -20,6 +20,11 @@
                 return Convert.FromBase64String(transportMessage.Body);
             }
 
+            if (s3Client == null)
+            {
+                throw new Exception("Unable to retrieve the body from S3. Configure the bucket name and key prefix with `transport.S3(string bucketForLargeMessages, string keyPrefix)`");
+            }
+
             var s3GetResponse = await s3Client.GetObjectAsync(s3BucketForLargeMessages,
                 transportMessage.S3BodyKey,
                 cancellationToken).ConfigureAwait(false);
