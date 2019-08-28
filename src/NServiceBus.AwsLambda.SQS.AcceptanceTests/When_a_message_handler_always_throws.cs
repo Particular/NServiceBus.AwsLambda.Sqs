@@ -1,10 +1,10 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using NUnit.Framework;
-
-namespace NServiceBus.AwsLambda.Tests
+﻿namespace NServiceBus.AwsLambda.Tests
 {
+    using System;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using NUnit.Framework;
+
     class When_a_message_handler_always_throws : MockLambdaTest
     {
         [Test]
@@ -17,7 +17,6 @@ namespace NServiceBus.AwsLambda.Tests
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
                 var configuration = new SQSTriggeredEndpointConfiguration(QueueName);
-                configuration.AdvancedConfiguration.Recoverability().Delayed(settings => settings.NumberOfRetries(0));
                 configuration.AdvancedConfiguration.SendFailedMessagesTo(ErrorQueueName);
                 configuration.AdvancedConfiguration.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
                 return configuration;
@@ -34,9 +33,13 @@ namespace NServiceBus.AwsLambda.Tests
 
         public class TestContext
         {
-            int count;
-            public int HandlerInvokationCount { get { return count; } }
+            public int HandlerInvokationCount
+            {
+                get { return count; }
+            }
+
             public void HandlerInvoked() => Interlocked.Increment(ref count);
+            int count;
         }
 
         public class AlwaysFailsMessage : ICommand
@@ -45,7 +48,6 @@ namespace NServiceBus.AwsLambda.Tests
 
         public class AlwaysFailsMessageHandler : IHandleMessages<AlwaysFailsMessage>
         {
-            TestContext testContext;
             public AlwaysFailsMessageHandler(TestContext context)
             {
                 testContext = context;
@@ -56,6 +58,8 @@ namespace NServiceBus.AwsLambda.Tests
                 testContext.HandlerInvoked();
                 throw new Exception("Simulated exception");
             }
+
+            TestContext testContext;
         }
     }
 }

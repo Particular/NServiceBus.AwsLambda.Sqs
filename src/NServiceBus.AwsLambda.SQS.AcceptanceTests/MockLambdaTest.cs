@@ -1,26 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
-using Amazon.Lambda.SQSEvents;
-using Amazon.SQS;
-using Amazon.SQS.Model;
-using NServiceBus.AwsLambda.SQS.AcceptanceTests;
-using NUnit.Framework;
-
-namespace NServiceBus.AwsLambda.Tests
+﻿namespace NServiceBus.AwsLambda.Tests
 {
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Threading.Tasks;
+    using Amazon.Lambda.SQSEvents;
+    using Amazon.S3;
+    using Amazon.S3.Model;
+    using Amazon.SQS;
+    using Amazon.SQS.Model;
+    using NUnit.Framework;
+    using SQS.AcceptanceTests;
+
     [TestFixture]
     class MockLambdaTest
     {
-        private AmazonSQSClient client;
-        private CreateQueueResponse createdQueue;
-        private CreateQueueResponse createdErrorQueue;
-
         protected string QueueName { get; set; }
         protected string ErrorQueueName { get; set; }
 
         protected string QueueNamePrefix { get; set; }
+        
+        protected string BucketName { get; set; }
+        protected string KeyPrefix { get; set; }
 
         [SetUp]
         public async Task Setup()
@@ -28,26 +28,46 @@ namespace NServiceBus.AwsLambda.Tests
             QueueNamePrefix = Path.GetFileNameWithoutExtension(Path.GetRandomFileName()).ToLowerInvariant();
 
             QueueName = $"{QueueNamePrefix}testqueue";
-            client = new AmazonSQSClient();
-            createdQueue = await client.CreateQueueAsync(QueueName);
+            sqsClient = new AmazonSQSClient();
+            createdQueue = await sqsClient.CreateQueueAsync(new CreateQueueRequest(QueueName)
+            {
+                Attributes = new Dictionary<string, string>
+                {
+                    { QueueAttributeName.VisibilityTimeout, "10" }
+                }
+            });
             ErrorQueueName = $"{QueueNamePrefix}error";
-            createdErrorQueue = await client.CreateQueueAsync(ErrorQueueName);
+            createdErrorQueue = await sqsClient.CreateQueueAsync(new CreateQueueRequest(ErrorQueueName)
+            {
+                Attributes = new Dictionary<string, string>
+                {
+                    { QueueAttributeName.VisibilityTimeout, "10" }
+                }
+            });
+            s3Client = new AmazonS3Client();
+            BucketName = $"{QueueNamePrefix}bucket";
+            KeyPrefix = QueueNamePrefix;
+            await s3Client.PutBucketAsync(new PutBucketRequest()
+            {
+                BucketName = BucketName,
+            });
         }
 
         [TearDown]
         public async Task TearDown()
         {
-            await client.DeleteQueueAsync(createdQueue.QueueUrl);
-            await client.DeleteQueueAsync(createdErrorQueue.QueueUrl);
+            await sqsClient.DeleteQueueAsync(createdQueue.QueueUrl);
+            await sqsClient.DeleteQueueAsync(createdErrorQueue.QueueUrl);
+            await s3Client.DeleteBucketAsync(BucketName);
         }
 
-        protected async Task<SQSEvent> GenerateAndReceiveSQSEvent<T>(int count) where T: new()
+        protected async Task<SQSEvent> GenerateAndReceiveSQSEvent<T>(int count) where T : new()
         {
             var endpointConfiguration = new EndpointConfiguration($"{QueueNamePrefix}sender");
             endpointConfiguration.SendOnly();
             endpointConfiguration.UsePersistence<InMemoryPersistence>();
             var transport = endpointConfiguration.UseTransport<SqsTransport>();
-            //transport.S3("bucketname", "my/key/prefix");
+            transport.S3(BucketName, KeyPrefix);
 
             var endpointInstance = await Endpoint.Start(endpointConfiguration)
                 .ConfigureAwait(false);
@@ -63,19 +83,19 @@ namespace NServiceBus.AwsLambda.Tests
 
             var receiveRequest = new ReceiveMessageRequest(createdQueue.QueueUrl)
             {
-                MaxNumberOfMessages = count
+                MaxNumberOfMessages = count,
             };
 
-            var receivedMessages =  await client.ReceiveMessageAsync(receiveRequest);
+            var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);
 
             return receivedMessages.ToSQSEvent();
         }
 
         protected async Task<int> CountMessagesInErrorQueue()
         {
-            var messagesInErrorQueueResponse = await client.ReceiveMessageAsync(new ReceiveMessageRequest(createdErrorQueue.QueueUrl)
+            var messagesInErrorQueueResponse = await sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest(createdErrorQueue.QueueUrl)
             {
-                MaxNumberOfMessages = 10
+                MaxNumberOfMessages = 10,
             });
 
             return messagesInErrorQueueResponse.Messages.Count;
@@ -85,5 +105,10 @@ namespace NServiceBus.AwsLambda.Tests
         {
             return Task.FromResult(0);
         }
+
+        private AmazonSQSClient sqsClient;
+        private CreateQueueResponse createdQueue;
+        private CreateQueueResponse createdErrorQueue;
+        private AmazonS3Client s3Client;
     }
 }

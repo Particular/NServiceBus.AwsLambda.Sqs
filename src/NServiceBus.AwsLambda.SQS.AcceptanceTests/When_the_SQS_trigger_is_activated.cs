@@ -1,10 +1,9 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using NUnit.Framework;
-
-namespace NServiceBus.AwsLambda.Tests
+﻿namespace NServiceBus.AwsLambda.Tests
 {
+    using System.Threading;
+    using System.Threading.Tasks;
+    using NUnit.Framework;
+
     class When_a_SQSEvent_is_processed : MockLambdaTest
     {
         [Test]
@@ -33,9 +32,13 @@ namespace NServiceBus.AwsLambda.Tests
 
         public class TestContext
         {
-            int count;
-            public int HandlerInvokationCount { get { return count; } }
+            public int HandlerInvokationCount
+            {
+                get { return count; }
+            }
+
             public void HandlerInvoked() => Interlocked.Increment(ref count);
+            int count;
         }
 
         public class SuccessMessage : ICommand
@@ -44,7 +47,6 @@ namespace NServiceBus.AwsLambda.Tests
 
         public class SuccessMessageHandler : IHandleMessages<SuccessMessage>
         {
-            TestContext testContext;
             public SuccessMessageHandler(TestContext context)
             {
                 testContext = context;
@@ -55,6 +57,8 @@ namespace NServiceBus.AwsLambda.Tests
                 testContext.HandlerInvoked();
                 return Task.CompletedTask;
             }
+
+            TestContext testContext;
         }
     }
 }
