@@ -1,5 +1,6 @@
 ﻿namespace NServiceBus.AwsLambda.Tests
 {
+    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -21,8 +22,9 @@
 
         protected string QueueNamePrefix { get; set; }
 
-        protected string BucketName { get; set; }
+        protected string BucketName { get; } = Environment.GetEnvironmentVariable("NServiceBus_AmazonSQS_S3Bucket");
         protected string KeyPrefix { get; set; }
+        
 
         [SetUp]
         public async Task Setup()
@@ -51,12 +53,7 @@
             });
             RegisterQueueNameToCleanup(ErrorQueueName);
             s3Client = CreateS3Client();
-            BucketName = $"{QueueNamePrefix}bucket";
             KeyPrefix = QueueNamePrefix;
-            await s3Client.PutBucketAsync(new PutBucketRequest
-            {
-                BucketName = BucketName
-            });
         }
 
         [TearDown]
@@ -66,7 +63,11 @@
             await Task.WhenAll(queueUrls);
             var queueDeletions = queueUrls.Select(x => x.Result.QueueUrl).Select(url => sqsClient.DeleteQueueAsync(url));
             await Task.WhenAll(queueDeletions);
-            var objects = await s3Client.ListObjectsAsync(BucketName);
+            var objects = await s3Client.ListObjectsAsync(new ListObjectsRequest
+            {
+                BucketName = BucketName,
+                Prefix = KeyPrefix
+            });
 
             if (objects.S3Objects.Any())
             {
@@ -79,11 +80,6 @@
                     }))
                 });
             }
-
-            await s3Client.DeleteBucketAsync(new DeleteBucketRequest
-            {
-                BucketName = BucketName
-            });
         }
 
         protected void RegisterQueueNameToCleanup(string queueName)
