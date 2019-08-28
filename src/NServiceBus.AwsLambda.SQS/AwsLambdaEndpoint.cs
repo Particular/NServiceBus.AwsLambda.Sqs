@@ -10,7 +10,7 @@
     using Amazon.S3;
     using Amazon.SQS;
     using Amazon.SQS.Model;
-    using AwsLambda;
+    using AwsLambda.SQS;
     using Configuration.AdvancedExtensibility;
     using Extensibility;
     using Logging;
@@ -54,7 +54,7 @@
         {
             var settingsHolder = configuration.AdvancedConfiguration.GetSettings();
             var sqsClientFactory = settingsHolder.Get<Func<IAmazonSQS>>(SettingsKeys.SqsClientFactory);
-            
+
             sqsClient = sqsClientFactory();
             awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
             queueUrl = (await sqsClient.GetQueueUrlAsync(settingsHolder.EndpointName()).ConfigureAwait(false)).QueueUrl;

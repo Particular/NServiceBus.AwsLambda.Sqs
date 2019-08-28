@@ -1,4 +1,4 @@
-﻿namespace NServiceBus
+﻿namespace NServiceBus.AwsLambda.SQS
 {
     static class SettingsKeys
     {

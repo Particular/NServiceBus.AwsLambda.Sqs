@@ -1,4 +1,4 @@
-﻿namespace NServiceBus.AwsLambda
+﻿namespace NServiceBus.AwsLambda.SQS
 {
     static class TransportHeaders
     {
