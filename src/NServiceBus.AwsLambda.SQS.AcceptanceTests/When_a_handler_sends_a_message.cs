@@ -17,7 +17,8 @@
             
             var destinationConfiguration = new EndpointConfiguration(destinationEndpointName);
             destinationConfiguration.UsePersistence<InMemoryPersistence>();
-            destinationConfiguration.UseTransport<SqsTransport>();
+            var destinationTransport = destinationConfiguration.UseTransport<SqsTransport>();
+            destinationTransport.ClientFactory(CreateSQSClient);
             destinationConfiguration.SendFailedMessagesTo(ErrorQueueName);
             destinationConfiguration.EnableInstallers();
             destinationConfiguration.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
