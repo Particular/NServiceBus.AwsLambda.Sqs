@@ -49,12 +49,13 @@
             await Task.WhenAll(processTasks).ConfigureAwait(false);
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc />
         protected override async Task Initialize(SQSTriggeredEndpointConfiguration configuration)
         {
             sqsClient = new AmazonSQSClient();
             awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
             queueUrl = (await sqsClient.GetQueueUrlAsync(configuration.AdvancedConfiguration.GetSettings().EndpointName()).ConfigureAwait(false)).QueueUrl;
+            errorQueueUrl = (await sqsClient.GetQueueUrlAsync(configuration.AdvancedConfiguration.GetSettings().ErrorQueueAddress()).ConfigureAwait(false)).QueueUrl;
 
             if (string.IsNullOrWhiteSpace(configuration.S3BucketForLargeMessages))
             {
@@ -220,9 +221,61 @@
             }
         }
 
-        static Task MovePoisonMessageToErrorQueue(SQSEvent.SQSMessage receivedMessage, string messageId)
+        async Task MovePoisonMessageToErrorQueue(SQSEvent.SQSMessage message, string messageId)
         {
-            throw new NotImplementedException(); // move to error is the sqs transport behaviour, but we don't have access to the error queue. Need to decide what to do here.
+            try
+            {
+                await sqsClient.SendMessageAsync(new SendMessageRequest
+                {
+                    QueueUrl = errorQueueUrl,
+                    MessageBody = message.Body,
+                    MessageAttributes =
+                    {
+                        [Headers.MessageId] = new MessageAttributeValue
+                        {
+                            StringValue = messageId,
+                            DataType = "String"
+                        }
+                    }
+                }, CancellationToken.None).ConfigureAwait(false);
+                // The MessageAttributes on message are read-only attributes provided by SQS
+                // and can't be re-sent. Unfortunately all the SQS metadata
+                // such as SentTimestamp is reset with this send.
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error moving poison message to error queue at url {errorQueueUrl}. Moving back to input queue.", ex);
+                try
+                {
+                    await sqsClient.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest
+                    {
+                        QueueUrl = queueUrl,
+                        ReceiptHandle = message.ReceiptHandle,
+                        VisibilityTimeout = 0
+                    }, CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception changeMessageVisibilityEx)
+                {
+                    Logger.Warn($"Error returning poison message back to input queue at url {queueUrl}. Poison message will become available at the input queue again after the visibility timeout expires.", changeMessageVisibilityEx);
+                }
+
+                return;
+            }
+
+            try
+            {
+                await sqsClient.DeleteMessageAsync(new DeleteMessageRequest
+                {
+                    QueueUrl = queueUrl,
+                    ReceiptHandle = message.ReceiptHandle
+                }, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Error removing poison message from input queue {queueUrl}. This may cause duplicate poison messages in the error queue for this endpoint.", ex);
+            }
+
+            // If there is a message body in S3, simply leave it there
         }
 
         static void LogPoisonMessage(string messageId, Exception exception)
@@ -244,6 +297,7 @@
         string s3BucketForLargeMessages;
         string awsEndpointUrl;
         string queueUrl;
+        string errorQueueUrl;
 
         static ILog Logger = LogManager.GetLogger(typeof(AwsLambdaSQSEndpoint));
         static readonly TransportTransaction transportTransaction = new TransportTransaction();
