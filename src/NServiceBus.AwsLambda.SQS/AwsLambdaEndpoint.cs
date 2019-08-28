@@ -53,7 +53,7 @@
         protected override async Task Initialize(SQSTriggeredEndpointConfiguration configuration)
         {
             var settingsHolder = configuration.AdvancedConfiguration.GetSettings();
-            var sqsClientFactory = settingsHolder.Get<Func<IAmazonSQS>>(SettingsKeys.SqsClientFactory) ?? (() => new AmazonSQSClient());
+            var sqsClientFactory = settingsHolder.GetOrDefault<Func<IAmazonSQS>>(SettingsKeys.SqsClientFactory) ?? (() => new AmazonSQSClient());
 
             sqsClient = sqsClientFactory();
             awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
@@ -66,7 +66,7 @@
                 return;
             }
 
-            var s3ClientFactory = settingsHolder.Get<Func<IAmazonS3>>(SettingsKeys.S3ClientFactory) ?? (() => new AmazonS3Client());
+            var s3ClientFactory = settingsHolder.GetOrDefault<Func<IAmazonS3>>(SettingsKeys.S3ClientFactory) ?? (() => new AmazonS3Client());
             s3Client = s3ClientFactory();
         }
 
