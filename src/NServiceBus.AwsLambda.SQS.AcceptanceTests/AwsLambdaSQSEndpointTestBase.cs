@@ -24,7 +24,7 @@
 
         protected string BucketName { get; } = Environment.GetEnvironmentVariable("NServiceBus_AmazonSQS_S3Bucket");
         protected string KeyPrefix { get; set; }
-        
+
 
         [SetUp]
         public async Task Setup()
