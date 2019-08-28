@@ -4,7 +4,7 @@
     using System.Threading.Tasks;
     using NUnit.Framework;
 
-    class When_a_SQSEvent_with_large_payloads_is_processed : MockLambdaTest
+    class When_a_SQSEvent_with_large_payloads_is_processed : AwsLambdaSQSEndpointTestBase
     {
         [Test]
         public async Task The_handlers_should_be_invoked_and_process_successfully()
@@ -16,10 +16,15 @@
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
                 var configuration = new SQSTriggeredEndpointConfiguration(QueueName);
-                configuration.S3(BucketName, KeyPrefix);
+                var transport = configuration.Transport;
+                transport.ClientFactory(CreateSQSClient);
                 
-                configuration.AdvancedConfiguration.SendFailedMessagesTo(ErrorQueueName);
-                configuration.AdvancedConfiguration.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
+                var s3 = transport.S3(BucketName, KeyPrefix);
+                s3.ClientFactory(CreateS3Client);
+
+                var advanced = configuration.AdvancedConfiguration;
+                advanced.SendFailedMessagesTo(ErrorQueueName);
+                advanced.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
                 return configuration;
             });
 

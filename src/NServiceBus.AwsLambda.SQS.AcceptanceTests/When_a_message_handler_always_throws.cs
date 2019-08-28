@@ -5,7 +5,7 @@
     using System.Threading.Tasks;
     using NUnit.Framework;
 
-    class When_a_message_handler_always_throws : MockLambdaTest
+    class When_a_message_handler_always_throws : AwsLambdaSQSEndpointTestBase
     {
         [Test]
         public async Task The_messages_should_forward_to_error_queue_by_default()
@@ -17,8 +17,12 @@
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
                 var configuration = new SQSTriggeredEndpointConfiguration(QueueName);
-                configuration.AdvancedConfiguration.SendFailedMessagesTo(ErrorQueueName);
-                configuration.AdvancedConfiguration.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
+                var transport = configuration.Transport;
+                transport.ClientFactory(CreateSQSClient);
+
+                var advanced = configuration.AdvancedConfiguration;
+                advanced.SendFailedMessagesTo(ErrorQueueName);
+                advanced.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
                 return configuration;
             });
 

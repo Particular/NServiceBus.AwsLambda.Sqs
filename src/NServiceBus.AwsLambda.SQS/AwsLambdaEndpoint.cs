@@ -52,18 +52,22 @@
         /// <inheritdoc />
         protected override async Task Initialize(SQSTriggeredEndpointConfiguration configuration)
         {
-            sqsClient = new AmazonSQSClient();
+            var settingsHolder = configuration.AdvancedConfiguration.GetSettings();
+            var sqsClientFactory = settingsHolder.Get<Func<IAmazonSQS>>(SettingsKeys.SqsClientFactory);
+            
+            sqsClient = sqsClientFactory();
             awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
-            queueUrl = (await sqsClient.GetQueueUrlAsync(configuration.AdvancedConfiguration.GetSettings().EndpointName()).ConfigureAwait(false)).QueueUrl;
-            errorQueueUrl = (await sqsClient.GetQueueUrlAsync(configuration.AdvancedConfiguration.GetSettings().ErrorQueueAddress()).ConfigureAwait(false)).QueueUrl;
+            queueUrl = (await sqsClient.GetQueueUrlAsync(settingsHolder.EndpointName()).ConfigureAwait(false)).QueueUrl;
+            errorQueueUrl = (await sqsClient.GetQueueUrlAsync(settingsHolder.ErrorQueueAddress()).ConfigureAwait(false)).QueueUrl;
 
-            if (string.IsNullOrWhiteSpace(configuration.S3BucketForLargeMessages))
+            s3BucketForLargeMessages = settingsHolder.GetOrDefault<string>(SettingsKeys.S3BucketForLargeMessages);
+            if (string.IsNullOrWhiteSpace(s3BucketForLargeMessages))
             {
                 return;
             }
 
-            s3Client = new AmazonS3Client();
-            s3BucketForLargeMessages = configuration.S3BucketForLargeMessages;
+            var s3ClientFactory = settingsHolder.Get<Func<IAmazonS3>>(SettingsKeys.S3ClientFactory);
+            s3Client = s3ClientFactory();
         }
 
         async Task ProcessMessage(SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, CancellationToken token)

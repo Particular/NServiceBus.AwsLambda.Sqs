@@ -5,6 +5,7 @@
     using System.Linq;
     using System.Threading.Tasks;
     using Amazon.Lambda.SQSEvents;
+    using Amazon.Runtime;
     using Amazon.S3;
     using Amazon.S3.Model;
     using Amazon.SQS;
@@ -13,7 +14,7 @@
     using SQS.AcceptanceTests;
 
     [TestFixture]
-    class MockLambdaTest
+    class AwsLambdaSQSEndpointTestBase
     {
         protected string QueueName { get; set; }
         protected string ErrorQueueName { get; set; }
@@ -31,7 +32,7 @@
             QueueNamePrefix = Path.GetFileNameWithoutExtension(Path.GetRandomFileName()).ToLowerInvariant();
 
             QueueName = $"{QueueNamePrefix}testqueue";
-            sqsClient = new AmazonSQSClient();
+            sqsClient = CreateSQSClient();
             createdQueue = await sqsClient.CreateQueueAsync(new CreateQueueRequest(QueueName)
             {
                 Attributes = new Dictionary<string, string>
@@ -49,7 +50,7 @@
                 }
             });
             RegisterQueueNameToCleanup(ErrorQueueName);
-            s3Client = new AmazonS3Client();
+            s3Client = CreateS3Client();
             BucketName = $"{QueueNamePrefix}bucket";
             KeyPrefix = QueueNamePrefix;
             await s3Client.PutBucketAsync(new PutBucketRequest
@@ -78,6 +79,7 @@
                     }))
                 });
             }
+
             await s3Client.DeleteBucketAsync(new DeleteBucketRequest
             {
                 BucketName = BucketName
@@ -129,16 +131,23 @@
             return messagesInErrorQueueResponse.Messages.Count;
         }
 
-        protected Task<int> CountMessagesInInputQueue()
+        public static IAmazonSQS CreateSQSClient()
         {
-            return Task.FromResult(0);
+            var credentials = new EnvironmentVariablesAWSCredentials();
+            return new AmazonSQSClient(credentials);
+        }
+
+        public static IAmazonS3 CreateS3Client()
+        {
+            var credentials = new EnvironmentVariablesAWSCredentials();
+            return new AmazonS3Client(credentials);
         }
 
         private List<string> queueNames;
 
-        private AmazonSQSClient sqsClient;
+        private IAmazonSQS sqsClient;
         private CreateQueueResponse createdQueue;
         private CreateQueueResponse createdErrorQueue;
-        private AmazonS3Client s3Client;
+        private IAmazonS3 s3Client;
     }
 }
