@@ -2,6 +2,7 @@
 {
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Threading.Tasks;
     using Amazon.Lambda.SQSEvents;
     using Amazon.S3;
@@ -18,13 +19,15 @@
         protected string ErrorQueueName { get; set; }
 
         protected string QueueNamePrefix { get; set; }
-        
+
         protected string BucketName { get; set; }
         protected string KeyPrefix { get; set; }
 
         [SetUp]
         public async Task Setup()
         {
+            queueNames = new List<string>();
+
             QueueNamePrefix = Path.GetFileNameWithoutExtension(Path.GetRandomFileName()).ToLowerInvariant();
 
             QueueName = $"{QueueNamePrefix}testqueue";
@@ -33,32 +36,57 @@
             {
                 Attributes = new Dictionary<string, string>
                 {
-                    { QueueAttributeName.VisibilityTimeout, "10" }
+                    {QueueAttributeName.VisibilityTimeout, "10"}
                 }
             });
+            RegisterQueueNameToCleanup(QueueName);
             ErrorQueueName = $"{QueueNamePrefix}error";
             createdErrorQueue = await sqsClient.CreateQueueAsync(new CreateQueueRequest(ErrorQueueName)
             {
                 Attributes = new Dictionary<string, string>
                 {
-                    { QueueAttributeName.VisibilityTimeout, "10" }
+                    {QueueAttributeName.VisibilityTimeout, "10"}
                 }
             });
+            RegisterQueueNameToCleanup(ErrorQueueName);
             s3Client = new AmazonS3Client();
             BucketName = $"{QueueNamePrefix}bucket";
             KeyPrefix = QueueNamePrefix;
-            await s3Client.PutBucketAsync(new PutBucketRequest()
+            await s3Client.PutBucketAsync(new PutBucketRequest
             {
-                BucketName = BucketName,
+                BucketName = BucketName
             });
         }
 
         [TearDown]
         public async Task TearDown()
         {
-            await sqsClient.DeleteQueueAsync(createdQueue.QueueUrl);
-            await sqsClient.DeleteQueueAsync(createdErrorQueue.QueueUrl);
-            await s3Client.DeleteBucketAsync(BucketName);
+            var queueUrls = queueNames.Select(name => sqsClient.GetQueueUrlAsync(name));
+            await Task.WhenAll(queueUrls);
+            var queueDeletions = queueUrls.Select(x => x.Result.QueueUrl).Select(url => sqsClient.DeleteQueueAsync(url));
+            await Task.WhenAll(queueDeletions);
+            var objects = await s3Client.ListObjectsAsync(BucketName);
+
+            if (objects.S3Objects.Any())
+            {
+                await s3Client.DeleteObjectsAsync(new DeleteObjectsRequest
+                {
+                    BucketName = BucketName,
+                    Objects = new List<KeyVersion>(objects.S3Objects.Select(o => new KeyVersion
+                    {
+                        Key = o.Key
+                    }))
+                });
+            }
+            await s3Client.DeleteBucketAsync(new DeleteBucketRequest
+            {
+                BucketName = BucketName
+            });
+        }
+
+        protected void RegisterQueueNameToCleanup(string queueName)
+        {
+            queueNames.Add(queueName);
         }
 
         protected async Task<SQSEvent> GenerateAndReceiveSQSEvent<T>(int count) where T : new()
@@ -83,7 +111,7 @@
 
             var receiveRequest = new ReceiveMessageRequest(createdQueue.QueueUrl)
             {
-                MaxNumberOfMessages = count,
+                MaxNumberOfMessages = count
             };
 
             var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);
@@ -95,7 +123,7 @@
         {
             var messagesInErrorQueueResponse = await sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest(createdErrorQueue.QueueUrl)
             {
-                MaxNumberOfMessages = 10,
+                MaxNumberOfMessages = 10
             });
 
             return messagesInErrorQueueResponse.Messages.Count;
@@ -105,6 +133,8 @@
         {
             return Task.FromResult(0);
         }
+
+        private List<string> queueNames;
 
         private AmazonSQSClient sqsClient;
         private CreateQueueResponse createdQueue;

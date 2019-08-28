@@ -3,7 +3,7 @@
     using System.Threading.Tasks;
     using NUnit.Framework;
 
-    class When_handler_sends_a_message : MockLambdaTest
+    class When_a_handler_sends_a_message : MockLambdaTest
     {
         [Test]
         public async Task The_message_should_be_received()
@@ -11,8 +11,11 @@
             var receivedMessages = await GenerateAndReceiveSQSEvent<MessageThatTriggersASentMessage>(1);
             
             var context = new TestContext();
+
+            var destinationEndpointName = $"{QueueNamePrefix}DestinationEndpoint";
+            RegisterQueueNameToCleanup(destinationEndpointName);
             
-            var destinationConfiguration = new EndpointConfiguration($"{QueueNamePrefix}DestinationEndpoint");
+            var destinationConfiguration = new EndpointConfiguration(destinationEndpointName);
             destinationConfiguration.UsePersistence<InMemoryPersistence>();
             destinationConfiguration.UseTransport<SqsTransport>();
             destinationConfiguration.SendFailedMessagesTo(ErrorQueueName);
@@ -24,7 +27,7 @@
             {
                 var configuration = new SQSTriggeredEndpointConfiguration(QueueName);
                 var routing = configuration.Transport.Routing();
-                routing.RouteToEndpoint(typeof(SentMessage), $"{QueueNamePrefix}DestinationEndpoint");
+                routing.RouteToEndpoint(typeof(SentMessage), destinationEndpointName);
                 configuration.AdvancedConfiguration.SendFailedMessagesTo(ErrorQueueName);
                 configuration.AdvancedConfiguration.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
                 return configuration;
