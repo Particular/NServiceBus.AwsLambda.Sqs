@@ -12,7 +12,6 @@
     using Amazon.SQS;
     using Amazon.SQS.Model;
     using NUnit.Framework;
-    using SQS.AcceptanceTests;
 
     [TestFixture]
     class AwsLambdaSQSEndpointTestBase
