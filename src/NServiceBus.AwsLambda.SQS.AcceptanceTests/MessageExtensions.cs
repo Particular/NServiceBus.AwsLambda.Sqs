@@ -1,4 +1,4 @@
-﻿namespace NServiceBus.AwsLambda.SQS.AcceptanceTests
+﻿namespace NServiceBus.AwsLambda.Tests
 {
     using System.Linq;
     using Amazon.Lambda.SQSEvents;

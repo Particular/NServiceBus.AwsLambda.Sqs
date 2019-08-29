@@ -18,7 +18,7 @@
                 var configuration = new SQSTriggeredEndpointConfiguration(QueueName);
                 var transport = configuration.Transport;
                 transport.ClientFactory(CreateSQSClient);
-                
+
                 var s3 = transport.S3(BucketName, KeyPrefix);
                 s3.ClientFactory(CreateS3Client);
 

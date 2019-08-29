@@ -12,7 +12,6 @@
     using Amazon.SQS;
     using Amazon.SQS.Model;
     using NUnit.Framework;
-    using SQS.AcceptanceTests;
 
     [TestFixture]
     class AwsLambdaSQSEndpointTestBase
@@ -24,7 +23,7 @@
 
         protected string BucketName { get; } = Environment.GetEnvironmentVariable("NServiceBus_AmazonSQS_S3Bucket");
         protected string KeyPrefix { get; set; }
-        
+
 
         [SetUp]
         public async Task Setup()

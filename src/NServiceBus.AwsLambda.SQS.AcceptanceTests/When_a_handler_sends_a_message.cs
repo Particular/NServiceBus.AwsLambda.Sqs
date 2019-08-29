@@ -14,7 +14,7 @@
 
             var destinationEndpointName = $"{QueueNamePrefix}DestinationEndpoint";
             RegisterQueueNameToCleanup(destinationEndpointName);
-            
+
             var destinationConfiguration = new EndpointConfiguration(destinationEndpointName);
             destinationConfiguration.UsePersistence<InMemoryPersistence>();
             var destinationTransport = destinationConfiguration.UseTransport<SqsTransport>();
@@ -29,10 +29,10 @@
                 var configuration = new SQSTriggeredEndpointConfiguration(QueueName);
                 var transport = configuration.Transport;
                 transport.ClientFactory(CreateSQSClient);
-                
+
                 var routing = transport.Routing();
                 routing.RouteToEndpoint(typeof(SentMessage), destinationEndpointName);
-                
+
                 var advanced = configuration.AdvancedConfiguration;
                 advanced.SendFailedMessagesTo(ErrorQueueName);
                 advanced.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
@@ -58,7 +58,7 @@
         public class MessageThatTriggersASentMessage : ICommand
         {
         }
-        
+
         public class SentMessage : ICommand
         {
         }
@@ -70,7 +70,7 @@
                 return context.Send(new SentMessage());
             }
         }
-        
+
         public class MessageHandlerThatReceivesSentMessage : IHandleMessages<SentMessage>
         {
             public MessageHandlerThatReceivesSentMessage(TestContext context)
