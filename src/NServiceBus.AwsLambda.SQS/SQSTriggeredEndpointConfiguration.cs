@@ -1,5 +1,6 @@
 ﻿namespace NServiceBus
 {
+    using System.Threading.Tasks;
     using Serverless;
 
     /// <summary>
@@ -14,6 +15,9 @@
         public SQSTriggeredEndpointConfiguration(string endpointName) : base(endpointName)
         {
             Transport = UseTransport<SqsTransport>();
+            
+            // by default do not write custom diagnostics to file because lambda is readonly
+            AdvancedConfiguration.CustomDiagnosticsWriter(diagnostics => Task.CompletedTask);
         }
 
         /// <summary>
