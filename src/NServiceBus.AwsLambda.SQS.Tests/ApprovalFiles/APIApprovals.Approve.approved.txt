@@ -4,7 +4,7 @@ namespace NServiceBus
     {
         public AwsLambdaSQSEndpoint(System.Func<Amazon.Lambda.Core.ILambdaContext, NServiceBus.SQSTriggeredEndpointConfiguration> configurationFactory) { }
         protected override System.Threading.Tasks.Task Initialize(NServiceBus.SQSTriggeredEndpointConfiguration configuration) { }
-        public System.Threading.Tasks.Task Process(Amazon.Lambda.SQSEvents.SQSEvent @event, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
+        public System.Threading.Tasks.Task Process(Amazon.Lambda.SQSEvents.SQSEvent @event, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = null) { }
     }
     public class SQSTriggeredEndpointConfiguration : NServiceBus.Serverless.ServerlessEndpointConfiguration
     {

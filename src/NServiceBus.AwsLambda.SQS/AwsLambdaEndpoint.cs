@@ -34,16 +34,16 @@
         /// <summary>
         /// Processes a messages received from an SQS trigger using the NServiceBus message pipeline.
         /// </summary>
-        public async Task Process(SQSEvent @event, ILambdaContext lambdaContext)
+        public async Task Process(SQSEvent @event, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
         {
             // enforce early initialization instead of lazy during process so that the necessary clients can be created.
-            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken).ConfigureAwait(false);
 
             var processTasks = new List<Task>();
 
             foreach (var receivedMessage in @event.Records)
             {
-                processTasks.Add(ProcessMessage(receivedMessage, lambdaContext, CancellationToken.None));
+                processTasks.Add(ProcessMessage(receivedMessage, lambdaContext, cancellationToken));
             }
 
             await Task.WhenAll(processTasks).ConfigureAwait(false);
