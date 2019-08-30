@@ -110,7 +110,8 @@
 
             var receiveRequest = new ReceiveMessageRequest(createdQueue.QueueUrl)
             {
-                MaxNumberOfMessages = count
+                MaxNumberOfMessages = count,
+                WaitTimeSeconds = 20,
             };
 
             var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);
@@ -120,12 +121,10 @@
 
         protected async Task<int> CountMessagesInErrorQueue()
         {
-            var messagesInErrorQueueResponse = await sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest(createdErrorQueue.QueueUrl)
-            {
-                MaxNumberOfMessages = 10
-            });
-
-            return messagesInErrorQueueResponse.Messages.Count;
+            var attReq = new GetQueueAttributesRequest {QueueUrl = createdErrorQueue.QueueUrl};
+            attReq.AttributeNames.Add("ApproximateNumberOfMessages");
+            var response = await sqsClient.GetQueueAttributesAsync(attReq).ConfigureAwait(false);
+            return response.ApproximateNumberOfMessages;
         }
 
         public static IAmazonSQS CreateSQSClient()
