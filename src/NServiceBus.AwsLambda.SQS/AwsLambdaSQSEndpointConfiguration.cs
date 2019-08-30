@@ -6,13 +6,13 @@
     /// <summary>
     /// Represents a serverless NServiceBus endpoint running with an AmazonSQS SQS trigger.
     /// </summary>
-    public class SQSTriggeredEndpointConfiguration : ServerlessEndpointConfiguration
+    public class AwsLambdaSQSEndpointConfiguration : ServerlessEndpointConfiguration
     {
         /// <summary>
         /// Creates a serverless NServiceBus endpoint running with an AmazonSQS SQS trigger.
         /// </summary>
         /// <param name="endpointName">The endpoint name to be used.</param>
-        public SQSTriggeredEndpointConfiguration(string endpointName) : base(endpointName)
+        public AwsLambdaSQSEndpointConfiguration(string endpointName) : base(endpointName)
         {
             Transport = UseTransport<SqsTransport>();
             

@@ -16,7 +16,7 @@
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
-                var configuration = new SQSTriggeredEndpointConfiguration(QueueName);
+                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName);
                 var transport = configuration.Transport;
                 transport.ClientFactory(CreateSQSClient);
 

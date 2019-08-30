@@ -22,12 +22,12 @@
     /// An NServiceBus endpoint hosted in AWS Lambda which does not receive messages automatically but only handles
     /// messages explicitly passed to it by the caller.
     /// </summary>
-    public class AwsLambdaSQSEndpoint : ServerlessEndpoint<ILambdaContext, SQSTriggeredEndpointConfiguration>
+    public class AwsLambdaSQSEndpoint : ServerlessEndpoint<ILambdaContext, AwsLambdaSQSEndpointConfiguration>
     {
         /// <summary>
         /// Create a new endpoint hosting in AWS Lambda.
         /// </summary>
-        public AwsLambdaSQSEndpoint(Func<ILambdaContext, SQSTriggeredEndpointConfiguration> configurationFactory) : base(configurationFactory)
+        public AwsLambdaSQSEndpoint(Func<ILambdaContext, AwsLambdaSQSEndpointConfiguration> configurationFactory) : base(configurationFactory)
         {
         }
 
@@ -50,7 +50,7 @@
         }
 
         /// <inheritdoc />
-        protected override async Task Initialize(SQSTriggeredEndpointConfiguration configuration)
+        protected override async Task Initialize(AwsLambdaSQSEndpointConfiguration configuration)
         {
             var settingsHolder = configuration.AdvancedConfiguration.GetSettings();
             var sqsClientFactory = settingsHolder.GetOrDefault<Func<IAmazonSQS>>(SettingsKeys.SqsClientFactory) ?? (() => new AmazonSQSClient());

@@ -1,14 +1,14 @@
 namespace NServiceBus
 {
-    public class AwsLambdaSQSEndpoint : NServiceBus.Serverless.ServerlessEndpoint<Amazon.Lambda.Core.ILambdaContext, NServiceBus.SQSTriggeredEndpointConfiguration>
+    public class AwsLambdaSQSEndpoint : NServiceBus.Serverless.ServerlessEndpoint<Amazon.Lambda.Core.ILambdaContext, NServiceBus.AwsLambdaSQSEndpointConfiguration>
     {
-        public AwsLambdaSQSEndpoint(System.Func<Amazon.Lambda.Core.ILambdaContext, NServiceBus.SQSTriggeredEndpointConfiguration> configurationFactory) { }
-        protected override System.Threading.Tasks.Task Initialize(NServiceBus.SQSTriggeredEndpointConfiguration configuration) { }
+        public AwsLambdaSQSEndpoint(System.Func<Amazon.Lambda.Core.ILambdaContext, NServiceBus.AwsLambdaSQSEndpointConfiguration> configurationFactory) { }
+        protected override System.Threading.Tasks.Task Initialize(NServiceBus.AwsLambdaSQSEndpointConfiguration configuration) { }
         public System.Threading.Tasks.Task Process(Amazon.Lambda.SQSEvents.SQSEvent @event, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = null) { }
     }
-    public class SQSTriggeredEndpointConfiguration : NServiceBus.Serverless.ServerlessEndpointConfiguration
+    public class AwsLambdaSQSEndpointConfiguration : NServiceBus.Serverless.ServerlessEndpointConfiguration
     {
-        public SQSTriggeredEndpointConfiguration(string endpointName) { }
+        public AwsLambdaSQSEndpointConfiguration(string endpointName) { }
         public NServiceBus.TransportExtensions<NServiceBus.SqsTransport> Transport { get; }
     }
 }
