@@ -57,8 +57,10 @@
 
             sqsClient = sqsClientFactory();
             awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
-            queueUrl = (await sqsClient.GetQueueUrlAsync(settingsHolder.EndpointName()).ConfigureAwait(false)).QueueUrl;
-            errorQueueUrl = (await sqsClient.GetQueueUrlAsync(settingsHolder.ErrorQueueAddress()).ConfigureAwait(false)).QueueUrl;
+            var sanitizedEndpointName = QueueNameHelper.GetSanitizedQueueName(settingsHolder.EndpointName());
+            queueUrl = (await sqsClient.GetQueueUrlAsync(sanitizedEndpointName).ConfigureAwait(false)).QueueUrl;
+            var sanitizedErrorQueueName = QueueNameHelper.GetSanitizedQueueName(settingsHolder.ErrorQueueAddress());
+            errorQueueUrl = (await sqsClient.GetQueueUrlAsync(sanitizedErrorQueueName).ConfigureAwait(false)).QueueUrl;
 
             s3BucketForLargeMessages = settingsHolder.GetOrDefault<string>(SettingsKeys.S3BucketForLargeMessages);
             if (string.IsNullOrWhiteSpace(s3BucketForLargeMessages))
