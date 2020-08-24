@@ -11,10 +11,10 @@
     using Amazon.SQS;
     using Amazon.SQS.Model;
     using AwsLambda.SQS;
+    using AwsLambda.SQS.TransportWrapper;
     using Configuration.AdvancedExtensibility;
     using Extensibility;
     using Logging;
-    using Serverless;
     using SimpleJson;
     using Transport;
 
@@ -22,13 +22,14 @@
     /// An NServiceBus endpoint hosted in AWS Lambda which does not receive messages automatically but only handles
     /// messages explicitly passed to it by the caller.
     /// </summary>
-    public class AwsLambdaSQSEndpoint : ServerlessEndpoint<ILambdaContext, AwsLambdaSQSEndpointConfiguration>
+    public class AwsLambdaSQSEndpoint
     {
         /// <summary>
         /// Create a new endpoint hosting in AWS Lambda.
         /// </summary>
-        public AwsLambdaSQSEndpoint(Func<ILambdaContext, AwsLambdaSQSEndpointConfiguration> configurationFactory) : base(configurationFactory)
+        public AwsLambdaSQSEndpoint(Func<ILambdaContext, AwsLambdaSQSEndpointConfiguration> configurationFactory)
         {
+            this.configurationFactory = configurationFactory;
         }
 
         /// <summary>
@@ -49,8 +50,31 @@
             await Task.WhenAll(processTasks).ConfigureAwait(false);
         }
 
-        /// <inheritdoc />
-        protected override async Task Initialize(AwsLambdaSQSEndpointConfiguration configuration)
+        async Task InitializeEndpointIfNecessary(ILambdaContext executionContext, CancellationToken token = default)
+        {
+            if (pipeline == null)
+            {
+                await semaphoreLock.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    if (pipeline == null)
+                    {
+                        var configuration = configurationFactory(executionContext);
+                        await Initialize(configuration).ConfigureAwait(false);
+                        await Endpoint.Start(configuration.EndpointConfiguration).ConfigureAwait(false);
+
+                        pipeline = configuration.PipelineInvoker;
+                    }
+                }
+                finally
+                {
+                    semaphoreLock.Release();
+                }
+            }
+        }
+
+
+        async Task Initialize(AwsLambdaSQSEndpointConfiguration configuration)
         {
             var settingsHolder = configuration.AdvancedConfiguration.GetSettings();
             var sqsClientFactory = settingsHolder.GetOrDefault<Func<IAmazonSQS>>(SettingsKeys.SqsClientFactory) ?? (() => new AmazonSQSClient());
@@ -207,6 +231,19 @@
                 }
             }
         }
+        
+        async Task Process(MessageContext messageContext, ILambdaContext executionContext)
+        {
+            await InitializeEndpointIfNecessary(executionContext, messageContext.ReceiveCancellationTokenSource.Token).ConfigureAwait(false);
+            await pipeline.PushMessage(messageContext).ConfigureAwait(false);
+        }
+
+        async Task<ErrorHandleResult> ProcessFailedMessage(ErrorContext errorContext, ILambdaContext executionContext)
+        {
+            await InitializeEndpointIfNecessary(executionContext).ConfigureAwait(false);
+
+            return await pipeline.PushFailedMessage(errorContext).ConfigureAwait(false);
+        }
 
         async Task DeleteMessageAndBodyIfRequired(SQSEvent.SQSMessage message, string messageS3BodyKey)
         {
@@ -298,6 +335,9 @@
             }
         }
 
+        readonly Func<ILambdaContext, AwsLambdaSQSEndpointConfiguration> configurationFactory;
+        readonly SemaphoreSlim semaphoreLock = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+        PipelineInvoker pipeline;
         IAmazonSQS sqsClient;
         IAmazonS3 s3Client;
         string s3BucketForLargeMessages;
