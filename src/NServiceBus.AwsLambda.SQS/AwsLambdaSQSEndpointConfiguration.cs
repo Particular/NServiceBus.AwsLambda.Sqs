@@ -1,5 +1,6 @@
 ﻿namespace NServiceBus
 {
+    using System;
     using System.Threading.Tasks;
     using AwsLambda.SQS;
     using AwsLambda.SQS.TransportWrapper;
@@ -34,6 +35,17 @@
 
             // by default do not write custom diagnostics to file because lambda is readonly
             AdvancedConfiguration.CustomDiagnosticsWriter(diagnostics => Task.CompletedTask);
+
+            TrySpecifyDefaultLicense();
+        }
+
+        void TrySpecifyDefaultLicense()
+        {
+            var licenseText = Environment.GetEnvironmentVariable("NSERVICEBUS_LICENSE");
+            if (!string.IsNullOrWhiteSpace(licenseText))
+            {
+                EndpointConfiguration.License(licenseText);
+            }
         }
 
         /// <summary>
