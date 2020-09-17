@@ -1,9 +1,10 @@
 namespace NServiceBus.AwsLambda.SQS
 {
     using System;
+    using Amazon.Lambda.Core;
     using NServiceBus.Logging;
 
-    class ConsoleLog : ILog
+    class LambdaLog : ILog
     {
         string name;
         public bool IsDebugEnabled { get; }
@@ -12,7 +13,7 @@ namespace NServiceBus.AwsLambda.SQS
         public bool IsErrorEnabled { get; }
         public bool IsFatalEnabled { get; }
 
-        public ConsoleLog(string name, LogLevel level)
+        public LambdaLog(string name, LogLevel level)
         {
             this.name = name;
 
@@ -25,17 +26,17 @@ namespace NServiceBus.AwsLambda.SQS
 
         void Write(string level, string message, Exception exception)
         {
-            Console.WriteLine($"{name}. {level}. {message}. Exception: {exception}");
+            LambdaLogger.Log($"{name}. {level}. {message}. Exception: {exception}");
         }
         void Write(string level, string message)
         {
-            Console.WriteLine($"{name}. {level}. {message}.");
+            LambdaLogger.Log($"{name}. {level}. {message}.");
         }
 
         void Write(string level, string format, params object[] args)
         {
             format = $"{name}. {level}. {format}";
-            Console.WriteLine(format, args);
+            LambdaLogger.Log(string.Format(format, args));
         }
 
         public void Debug(string message)

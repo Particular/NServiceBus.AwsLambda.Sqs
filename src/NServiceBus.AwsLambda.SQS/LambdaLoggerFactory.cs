@@ -3,11 +3,11 @@
     using NServiceBus.Logging;
     using System;
 
-    class ConsoleLoggerFactory : ILoggerFactory
+    class LambdaLoggerFactory : ILoggerFactory
     {
         LogLevel level;
 
-        public ConsoleLoggerFactory(LogLevel level)
+        public LambdaLoggerFactory(LogLevel level)
         {
             this.level = level;
         }
@@ -19,7 +19,7 @@
 
         public ILog GetLogger(string name)
         {
-            return new ConsoleLog(name, level);
+            return new LambdaLog(name, level);
         }
     }
 }

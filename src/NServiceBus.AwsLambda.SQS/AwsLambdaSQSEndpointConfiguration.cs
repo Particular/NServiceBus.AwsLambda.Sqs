@@ -25,7 +25,7 @@
 
             EndpointConfiguration.UsePersistence<InMemoryPersistence>();
 
-            LogManager.Use<ConsoleLoggerDefinition>();
+            LogManager.Use<LambdaLoggerDefinition>();
 
             //make sure a call to "onError" will move the message to the error queue.
             EndpointConfiguration.Recoverability().Delayed(c => c.NumberOfRetries(0));

@@ -2,7 +2,7 @@
 {
     using NServiceBus.Logging;
 
-    class ConsoleLoggerDefinition : LoggingFactoryDefinition
+    class LambdaLoggerDefinition : LoggingFactoryDefinition
     {
         LogLevel level = LogLevel.Info;
 
@@ -13,7 +13,7 @@
 
         protected override ILoggerFactory GetLoggingFactory()
         {
-            return new ConsoleLoggerFactory(level);
+            return new LambdaLoggerFactory(level);
         }
     }
 }
