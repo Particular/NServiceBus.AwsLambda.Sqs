@@ -5,6 +5,7 @@
     using AwsLambda.SQS;
     using AwsLambda.SQS.TransportWrapper;
     using Configuration.AdvancedExtensibility;
+    using NServiceBus.Logging;
     using Serialization;
     using Transport;
 
@@ -24,6 +25,8 @@
             EndpointConfiguration = new EndpointConfiguration(endpointName);
 
             EndpointConfiguration.UsePersistence<InMemoryPersistence>();
+
+            LogManager.Use<LambdaLoggerDefinition>();
 
             //make sure a call to "onError" will move the message to the error queue.
             EndpointConfiguration.Recoverability().Delayed(c => c.NumberOfRetries(0));
