@@ -15,6 +15,7 @@
     using Configuration.AdvancedExtensibility;
     using Extensibility;
     using Logging;
+    using Settings;
     using SimpleJson;
     using Transport;
 
@@ -82,10 +83,8 @@
 
             sqsClient = sqsClientFactory();
             awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
-            var sanitizedEndpointName = QueueNameHelper.GetSanitizedQueueName(settingsHolder.EndpointName());
-            queueUrl = (await sqsClient.GetQueueUrlAsync(sanitizedEndpointName).ConfigureAwait(false)).QueueUrl;
-            var sanitizedErrorQueueName = QueueNameHelper.GetSanitizedQueueName(settingsHolder.ErrorQueueAddress());
-            errorQueueUrl = (await sqsClient.GetQueueUrlAsync(sanitizedErrorQueueName).ConfigureAwait(false)).QueueUrl;
+            queueUrl = await GetQueueUrl(settingsHolder.EndpointName()).ConfigureAwait(false);
+            errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress()).ConfigureAwait(false);
 
             s3BucketForLargeMessages = settingsHolder.GetOrDefault<string>(SettingsKeys.S3BucketForLargeMessages);
             if (string.IsNullOrWhiteSpace(s3BucketForLargeMessages))
@@ -95,6 +94,21 @@
 
             var s3ClientFactory = settingsHolder.GetOrDefault<Func<IAmazonS3>>(SettingsKeys.S3ClientFactory) ?? (() => new AmazonS3Client());
             s3Client = s3ClientFactory();
+        }
+
+        async Task<string> GetQueueUrl(string queueName)
+        {
+            var sanitizedErrorQueueName = QueueNameHelper.GetSanitizedQueueName(queueName);
+            try
+            {
+                return (await sqsClient.GetQueueUrlAsync(sanitizedErrorQueueName).ConfigureAwait(false)).QueueUrl;
+            }
+            catch (Exception e)
+            {
+                Logger.Error($"Failed to obtain the queue URL for queue {sanitizedErrorQueueName} (derived from configured name {queueName}).", e);
+                throw;
+            }
+            
         }
 
         async Task ProcessMessage(SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, CancellationToken token)
