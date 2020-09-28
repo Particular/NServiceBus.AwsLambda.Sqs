@@ -17,11 +17,11 @@ namespace NServiceBus.AwsLambda.SQS
         {
             this.name = name;
 
-            IsDebugEnabled = LogLevel.Debug >= level;
-            IsInfoEnabled = LogLevel.Info >= level;
-            IsWarnEnabled = LogLevel.Warn >= level;
-            IsErrorEnabled = LogLevel.Error >= level;
-            IsFatalEnabled = LogLevel.Fatal >= level;
+            IsDebugEnabled = level <= LogLevel.Debug;
+            IsInfoEnabled = level <= LogLevel.Info;
+            IsWarnEnabled = level <= LogLevel.Warn;
+            IsErrorEnabled = level <= LogLevel.Error;
+            IsFatalEnabled = level <= LogLevel.Fatal;
         }
 
         void Write(string level, string message, Exception exception)
