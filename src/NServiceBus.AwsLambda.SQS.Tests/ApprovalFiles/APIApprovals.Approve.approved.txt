@@ -3,7 +3,7 @@ namespace NServiceBus
     public class AwsLambdaSQSEndpoint
     {
         public AwsLambdaSQSEndpoint(System.Func<Amazon.Lambda.Core.ILambdaContext, NServiceBus.AwsLambdaSQSEndpointConfiguration> configurationFactory) { }
-        public System.Threading.Tasks.Task Process(Amazon.Lambda.SQSEvents.SQSEvent @event, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = null) { }
+        public System.Threading.Tasks.Task Process(Amazon.Lambda.SQSEvents.SQSEvent @event, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public class AwsLambdaSQSEndpointConfiguration
     {
