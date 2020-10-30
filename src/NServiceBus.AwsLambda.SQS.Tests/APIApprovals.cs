@@ -10,7 +10,11 @@
         [Test]
         public void Approve()
         {
-            var publicApi = ApiGenerator.GeneratePublicApi(typeof(AwsLambdaSQSEndpoint).Assembly, excludeAttributes: new[] {"System.Runtime.Versioning.TargetFrameworkAttribute"});
+            var options = new ApiGeneratorOptions
+            {
+                ExcludeAttributes = new[] {"System.Runtime.Versioning.TargetFrameworkAttribute"}
+            };
+            var publicApi = typeof(AwsLambdaSQSEndpoint).Assembly.GeneratePublicApi(options);
             Approver.Verify(publicApi);
         }
     }
