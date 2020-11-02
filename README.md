@@ -1,1 +1,1 @@
-# NServiceBus.AwsLambda
+# NServiceBus.AwsLambda.SQS
