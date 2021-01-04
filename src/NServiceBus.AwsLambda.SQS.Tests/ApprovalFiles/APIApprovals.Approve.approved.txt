@@ -1,6 +1,6 @@
 namespace NServiceBus
 {
-    public class AwsLambdaSQSEndpoint
+    public class AwsLambdaSQSEndpoint : NServiceBus.IAwsLambdaSQSEndpoint
     {
         public AwsLambdaSQSEndpoint(System.Func<Amazon.Lambda.Core.ILambdaContext, NServiceBus.AwsLambdaSQSEndpointConfiguration> configurationFactory) { }
         public System.Threading.Tasks.Task Process(Amazon.Lambda.SQSEvents.SQSEvent @event, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
@@ -15,5 +15,9 @@ namespace NServiceBus
             where T : NServiceBus.Serialization.SerializationDefinition, new () { }
         protected NServiceBus.TransportExtensions<TTransport> UseTransport<TTransport>()
             where TTransport : NServiceBus.Transport.TransportDefinition, new () { }
+    }
+    public interface IAwsLambdaSQSEndpoint
+    {
+        System.Threading.Tasks.Task Process(Amazon.Lambda.SQSEvents.SQSEvent @event, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
     }
 }

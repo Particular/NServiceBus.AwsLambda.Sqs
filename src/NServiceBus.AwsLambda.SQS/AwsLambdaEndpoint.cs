@@ -15,7 +15,6 @@
     using Configuration.AdvancedExtensibility;
     using Extensibility;
     using Logging;
-    using Settings;
     using SimpleJson;
     using Transport;
 
@@ -23,7 +22,7 @@
     /// An NServiceBus endpoint hosted in AWS Lambda which does not receive messages automatically but only handles
     /// messages explicitly passed to it by the caller.
     /// </summary>
-    public class AwsLambdaSQSEndpoint
+    public class AwsLambdaSQSEndpoint : IAwsLambdaSQSEndpoint
     {
         /// <summary>
         /// Create a new endpoint hosting in AWS Lambda.
@@ -75,7 +74,6 @@
             }
         }
 
-
         async Task Initialize(AwsLambdaSQSEndpointConfiguration configuration)
         {
             var settingsHolder = configuration.AdvancedConfiguration.GetSettings();
@@ -108,7 +106,6 @@
                 Logger.Error($"Failed to obtain the queue URL for queue {sanitizedErrorQueueName} (derived from configured name {queueName}).", e);
                 throw;
             }
-            
         }
 
         async Task ProcessMessage(SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, CancellationToken token)
@@ -246,7 +243,7 @@
                 }
             }
         }
-        
+
         async Task Process(MessageContext messageContext, ILambdaContext executionContext)
         {
             await InitializeEndpointIfNecessary(executionContext, messageContext.ReceiveCancellationTokenSource.Token).ConfigureAwait(false);
