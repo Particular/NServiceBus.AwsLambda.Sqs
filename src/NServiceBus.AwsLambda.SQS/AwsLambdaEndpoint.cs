@@ -62,7 +62,8 @@
                         var configuration = configurationFactory(executionContext);
                         await Initialize(configuration).ConfigureAwait(false);
                         LogManager.GetLogger("Previews").Info("NServiceBus.AwsLambda.SQS is a preview package. Preview packages are licensed separately from the rest of the Particular Software platform and have different support guarantees. You can view the license at https://particular.net/eula/previews and the support policy at https://docs.particular.net/previews/support-policy. Customer adoption drives whether NServiceBus.AwsLambda.SQS will be incorporated into the Particular Software platform. Let us know you are using it, if you haven't already, by emailing us at support@particular.net.");
-                        await Endpoint.Start(configuration.EndpointConfiguration).ConfigureAwait(false);
+
+                        endpoint = await Endpoint.Start(configuration.EndpointConfiguration).ConfigureAwait(false);
 
                         pipeline = configuration.PipelineInvoker;
                     }
@@ -72,6 +73,100 @@
                     semaphoreLock.Release();
                 }
             }
+        }
+
+        /// <inheritdoc />
+        public async Task Send(object message, SendOptions options, ILambdaContext lambdaContext)
+        {
+            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+
+            await endpoint.Send(message, options).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public Task Send(object message, ILambdaContext lambdaContext)
+        {
+            return Send(message, new SendOptions(), lambdaContext);
+        }
+
+        /// <inheritdoc />
+        public async Task Send<T>(Action<T> messageConstructor, SendOptions options, ILambdaContext lambdaContext)
+        {
+            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+
+            await endpoint.Send(messageConstructor, options).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task Send<T>(Action<T> messageConstructor, ILambdaContext lambdaContext)
+        {
+            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+
+            await Send(messageConstructor, new SendOptions(), lambdaContext).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task Publish(object message, PublishOptions options, ILambdaContext lambdaContext)
+        {
+            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+
+            await endpoint.Publish(message, options).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task Publish<T>(Action<T> messageConstructor, PublishOptions options, ILambdaContext lambdaContext)
+        {
+            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+
+            await endpoint.Publish(messageConstructor, options).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task Publish(object message, ILambdaContext lambdaContext)
+        {
+            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+
+            await endpoint.Publish(message).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task Publish<T>(Action<T> messageConstructor, ILambdaContext lambdaContext)
+        {
+            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+
+            await endpoint.Publish(messageConstructor).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task Subscribe(Type eventType, SubscribeOptions options, ILambdaContext lambdaContext)
+        {
+            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+
+            await endpoint.Subscribe(eventType, options).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task Subscribe(Type eventType, ILambdaContext lambdaContext)
+        {
+            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+
+            await endpoint.Subscribe(eventType).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task Unsubscribe(Type eventType, UnsubscribeOptions options, ILambdaContext lambdaContext)
+        {
+            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+
+            await endpoint.Unsubscribe(eventType, options).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task Unsubscribe(Type eventType, ILambdaContext lambdaContext)
+        {
+            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+
+            await endpoint.Unsubscribe(eventType).ConfigureAwait(false);
         }
 
         async Task Initialize(AwsLambdaSQSEndpointConfiguration configuration)
@@ -350,6 +445,7 @@
         readonly Func<ILambdaContext, AwsLambdaSQSEndpointConfiguration> configurationFactory;
         readonly SemaphoreSlim semaphoreLock = new SemaphoreSlim(initialCount: 1, maxCount: 1);
         PipelineInvoker pipeline;
+        IEndpointInstance endpoint;
         IAmazonSQS sqsClient;
         IAmazonS3 s3Client;
         string s3BucketForLargeMessages;
