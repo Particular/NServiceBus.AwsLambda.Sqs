@@ -9,7 +9,7 @@
         public async Task The_message_should_be_received()
         {
             var receivedMessages = await GenerateAndReceiveSQSEvent<MessageThatTriggersASentMessage>(1);
-            
+
             var context = new TestContext();
 
             var destinationEndpointName = $"{QueueNamePrefix}DestinationEndpoint";
