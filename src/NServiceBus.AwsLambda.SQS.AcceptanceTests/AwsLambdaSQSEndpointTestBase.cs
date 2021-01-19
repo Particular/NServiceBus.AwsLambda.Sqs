@@ -121,7 +121,7 @@
 
         protected async Task<int> CountMessagesInErrorQueue()
         {
-            var attReq = new GetQueueAttributesRequest {QueueUrl = createdErrorQueue.QueueUrl};
+            var attReq = new GetQueueAttributesRequest { QueueUrl = createdErrorQueue.QueueUrl };
             attReq.AttributeNames.Add("ApproximateNumberOfMessages");
             var response = await sqsClient.GetQueueAttributesAsync(attReq).ConfigureAwait(false);
             return response.ApproximateNumberOfMessages;
@@ -139,11 +139,11 @@
             return new AmazonS3Client(credentials);
         }
 
-        private List<string> queueNames;
+        List<string> queueNames;
 
-        private IAmazonSQS sqsClient;
-        private CreateQueueResponse createdQueue;
-        private CreateQueueResponse createdErrorQueue;
-        private IAmazonS3 s3Client;
+        IAmazonSQS sqsClient;
+        CreateQueueResponse createdQueue;
+        CreateQueueResponse createdErrorQueue;
+        IAmazonS3 s3Client;
     }
 }

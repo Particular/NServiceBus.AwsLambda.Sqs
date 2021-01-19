@@ -1,7 +1,6 @@
-﻿using System;
-
-namespace NServiceBus
+﻿namespace NServiceBus
 {
+    using System;
     using System.Threading;
     using System.Threading.Tasks;
     using Amazon.Lambda.Core;

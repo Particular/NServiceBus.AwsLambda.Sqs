@@ -10,7 +10,6 @@
     <PackageReference Include="Amazon.Lambda.Core" Version="1.2.0" />
     <PackageReference Include="Amazon.Lambda.SQSEvents" Version="1.2.0" />
     <PackageReference Include="NServiceBus.AmazonSQS" Version="5.2.1" />
-    <PackageReference Include="Particular.CodeRules" Version="0.7.0" PrivateAssets="All" />
     <PackageReference Include="Particular.Packaging" Version="0.9.0" PrivateAssets="All" />
   </ItemGroup>
 
