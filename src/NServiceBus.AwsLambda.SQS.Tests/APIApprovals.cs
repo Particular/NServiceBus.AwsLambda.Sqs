@@ -12,7 +12,7 @@
         {
             var options = new ApiGeneratorOptions
             {
-                ExcludeAttributes = new[] {"System.Runtime.Versioning.TargetFrameworkAttribute", "System.Reflection.AssemblyMetadataAttribute" }
+                ExcludeAttributes = new[] { "System.Runtime.Versioning.TargetFrameworkAttribute", "System.Reflection.AssemblyMetadataAttribute" }
             };
             var publicApi = typeof(AwsLambdaSQSEndpoint).Assembly.GeneratePublicApi(options);
             Approver.Verify(publicApi);

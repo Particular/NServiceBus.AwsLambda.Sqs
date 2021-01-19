@@ -36,10 +36,7 @@
 
         public class TestContext
         {
-            public int HandlerInvokationCount
-            {
-                get { return count; }
-            }
+            public int HandlerInvokationCount => count;
 
             public void HandlerInvoked() => Interlocked.Increment(ref count);
             int count;
