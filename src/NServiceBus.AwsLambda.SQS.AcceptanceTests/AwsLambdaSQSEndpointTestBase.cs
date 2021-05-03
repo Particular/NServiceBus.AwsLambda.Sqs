@@ -21,7 +21,7 @@
 
         protected string QueueNamePrefix { get; set; }
 
-        protected string BucketName { get; } = Environment.GetEnvironmentVariable("NServiceBus_AmazonSQS_S3Bucket");
+        protected string BucketName { get; } = Environment.GetEnvironmentVariable("NSERVICEBUS_AMAZONSQS_S3BUCKET");
         protected string KeyPrefix { get; set; }
 
 
