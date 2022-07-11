@@ -16,7 +16,11 @@
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, new SqsTransport(CreateSQSClient(), CreateSNSClient()));
+                var transport = new SqsTransport(CreateSQSClient(), CreateSNSClient())
+                {
+                    S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client())
+                };
+                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, transport);
 
                 var advanced = configuration.AdvancedConfiguration;
                 advanced.SendFailedMessagesTo(ErrorQueueName);
