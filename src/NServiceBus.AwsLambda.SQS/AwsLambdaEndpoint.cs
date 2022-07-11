@@ -63,8 +63,7 @@
                         await Initialize(configuration).ConfigureAwait(false);
                         LogManager.GetLogger("Previews").Info("NServiceBus.AwsLambda.SQS is a preview package. Preview packages are licensed separately from the rest of the Particular Software platform and have different support guarantees. You can view the license at https://particular.net/eula/previews and the support policy at https://docs.particular.net/previews/support-policy. Customer adoption drives whether NServiceBus.AwsLambda.SQS will be incorporated into the Particular Software platform. Let us know you are using it, if you haven't already, by emailing us at support@particular.net.");
 
-                        endpoint = await Endpoint.Start(configuration.EndpointConfiguration).ConfigureAwait(false);
-
+                        endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token).ConfigureAwait(false);
                         pipeline = configuration.PipelineInvoker;
                     }
                 }
@@ -302,10 +301,10 @@
                             new Dictionary<string, string>(headers),
                             body,
                             transportTransaction,
-                            messageContextCancellationTokenSource,
+                            pipeline.ReceiveAddress,
                             new ContextBag());
 
-                        await Process(messageContext, lambdaContext).ConfigureAwait(false);
+                        await Process(messageContext, lambdaContext, token).ConfigureAwait(false);
 
                         messageProcessedOk = !messageContextCancellationTokenSource.IsCancellationRequested;
                     }
@@ -324,9 +323,11 @@
                             nativeMessageId,
                             body,
                             transportTransaction,
-                            immediateProcessingAttempts);
+                            immediateProcessingAttempts,
+                            pipeline.ReceiveAddress,
+                            new ContextBag());
 
-                        errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext).ConfigureAwait(false);
+                        errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext, token).ConfigureAwait(false);
                     }
                     catch (Exception onErrorEx)
                     {
@@ -339,17 +340,17 @@
             }
         }
 
-        async Task Process(MessageContext messageContext, ILambdaContext executionContext)
+        async Task Process(MessageContext messageContext, ILambdaContext executionContext, CancellationToken token)
         {
-            await InitializeEndpointIfNecessary(executionContext, messageContext.ReceiveCancellationTokenSource.Token).ConfigureAwait(false);
-            await pipeline.PushMessage(messageContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(executionContext, token).ConfigureAwait(false);
+            await pipeline.PushMessage(messageContext, token).ConfigureAwait(false);
         }
 
-        async Task<ErrorHandleResult> ProcessFailedMessage(ErrorContext errorContext, ILambdaContext executionContext)
+        async Task<ErrorHandleResult> ProcessFailedMessage(ErrorContext errorContext, ILambdaContext executionContext, CancellationToken token)
         {
-            await InitializeEndpointIfNecessary(executionContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(executionContext, token).ConfigureAwait(false);
 
-            return await pipeline.PushFailedMessage(errorContext).ConfigureAwait(false);
+            return await pipeline.PushFailedMessage(errorContext, token).ConfigureAwait(false);
         }
 
         async Task DeleteMessageAndBodyIfRequired(SQSEvent.SQSMessage message, string messageS3BodyKey)

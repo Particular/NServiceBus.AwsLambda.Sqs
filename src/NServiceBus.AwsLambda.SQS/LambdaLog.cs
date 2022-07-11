@@ -3,6 +3,7 @@ namespace NServiceBus.AwsLambda.SQS
     using System;
     using Amazon.Lambda.Core;
     using NServiceBus.Logging;
+    using LogLevel = Logging.LogLevel;
 
     class LambdaLog : ILog
     {

@@ -7,7 +7,6 @@
     using Configuration.AdvancedExtensibility;
     using NServiceBus.Logging;
     using Serialization;
-    using Transport;
 
     /// <summary>
     /// Represents a serverless NServiceBus endpoint running with an AmazonSQS SQS trigger.
@@ -15,18 +14,21 @@
     public class AwsLambdaSQSEndpointConfiguration
     {
         readonly ServerlessRecoverabilityPolicy recoverabilityPolicy = new ServerlessRecoverabilityPolicy();
+        ServerlessTransport serverlessTransport;
+
+        static AwsLambdaSQSEndpointConfiguration()
+        {
+            LogManager.Use<LambdaLoggerDefinition>();
+        }
 
         /// <summary>
         /// Creates a serverless NServiceBus endpoint running with an AmazonSQS SQS trigger.
         /// </summary>
         /// <param name="endpointName">The endpoint name to be used.</param>
-        public AwsLambdaSQSEndpointConfiguration(string endpointName)
+        /// <param name="transport">The configured SQS transport</param>
+        public AwsLambdaSQSEndpointConfiguration(string endpointName, SqsTransport transport)
         {
             EndpointConfiguration = new EndpointConfiguration(endpointName);
-
-            EndpointConfiguration.UsePersistence<InMemoryPersistence>();
-
-            LogManager.Use<LambdaLoggerDefinition>();
 
             //make sure a call to "onError" will move the message to the error queue.
             EndpointConfiguration.Recoverability().Delayed(c => c.NumberOfRetries(0));
@@ -34,10 +36,14 @@
             recoverabilityPolicy.SendFailedMessagesToErrorQueue = true;
             EndpointConfiguration.Recoverability().CustomPolicy(recoverabilityPolicy.Invoke);
 
-            Transport = UseTransport<SqsTransport>();
+            Transport = transport;
+
+            serverlessTransport = new ServerlessTransport(Transport);
+            var serverlessRouting = AdvancedConfiguration.UseTransport(serverlessTransport);
+            Routing = new RoutingSettings<SqsTransport>(serverlessRouting.GetSettings());
 
             // by default do not write custom diagnostics to file because lambda is readonly
-            AdvancedConfiguration.CustomDiagnosticsWriter(diagnostics => Task.CompletedTask);
+            AdvancedConfiguration.CustomDiagnosticsWriter((diagnostics, token) => Task.CompletedTask);
 
             TrySpecifyDefaultLicense();
         }
@@ -54,27 +60,20 @@
         /// <summary>
         /// Amazon SQS transport
         /// </summary>
-        public TransportExtensions<SqsTransport> Transport { get; }
+        public SqsTransport Transport { get; }
+
+        /// <summary>
+        /// The routing configuration.
+        /// </summary>
+        public RoutingSettings<SqsTransport> Routing { get; }
 
         internal EndpointConfiguration EndpointConfiguration { get; }
-        internal PipelineInvoker PipelineInvoker { get; private set; }
+        internal PipelineInvoker PipelineInvoker => serverlessTransport.PipelineInvoker;
 
         /// <summary>
         /// Gives access to the underlying endpoint configuration for advanced configuration options.
         /// </summary>
         public EndpointConfiguration AdvancedConfiguration => EndpointConfiguration;
-
-        /// <summary>
-        /// Define a transport to be used when sending and publishing messages.
-        /// </summary>
-        protected TransportExtensions<TTransport> UseTransport<TTransport>()
-            where TTransport : TransportDefinition, new()
-        {
-            var serverlessTransport = EndpointConfiguration.UseTransport<ServerlessTransport<TTransport>>();
-            //TODO improve
-            PipelineInvoker = PipelineAccess(serverlessTransport);
-            return BaseTransportConfiguration(serverlessTransport);
-        }
 
         /// <summary>
         /// Define the serializer to be used.
@@ -90,18 +89,6 @@
         public void DoNotSendMessagesToErrorQueue()
         {
             recoverabilityPolicy.SendFailedMessagesToErrorQueue = false;
-        }
-
-        static PipelineInvoker PipelineAccess<TBaseTransport>(
-            TransportExtensions<ServerlessTransport<TBaseTransport>> transportConfiguration) where TBaseTransport : TransportDefinition, new()
-        {
-            return transportConfiguration.GetSettings().GetOrCreate<PipelineInvoker>();
-        }
-
-        static TransportExtensions<TBaseTransport> BaseTransportConfiguration<TBaseTransport>(
-            TransportExtensions<ServerlessTransport<TBaseTransport>> transportConfiguration) where TBaseTransport : TransportDefinition, new()
-        {
-            return new TransportExtensions<TBaseTransport>(transportConfiguration.GetSettings());
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿namespace NServiceBus.AwsLambda.Tests
 {
     using System.Threading.Tasks;
+    using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
 
     class When_a_handler_sends_a_message : AwsLambdaSQSEndpointTestBase
@@ -16,26 +17,23 @@
             RegisterQueueNameToCleanup(destinationEndpointName);
 
             var destinationConfiguration = new EndpointConfiguration(destinationEndpointName);
-            destinationConfiguration.UsePersistence<InMemoryPersistence>();
+            destinationConfiguration.UsePersistence<NonDurablePersistence>();
             var destinationTransport = destinationConfiguration.UseTransport<SqsTransport>();
             destinationTransport.ClientFactory(CreateSQSClient);
             destinationConfiguration.SendFailedMessagesTo(ErrorQueueName);
             destinationConfiguration.EnableInstallers();
-            destinationConfiguration.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
+            destinationConfiguration.RegisterComponents(c => c.AddSingleton(context));
             var destinationEndpoint = await Endpoint.Start(destinationConfiguration);
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName);
-                var transport = configuration.Transport;
-                transport.ClientFactory(CreateSQSClient);
+                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, new SqsTransport(CreateSQSClient(), CreateSNSClient()));
 
-                var routing = transport.Routing();
-                routing.RouteToEndpoint(typeof(SentMessage), destinationEndpointName);
+                configuration.Routing.RouteToEndpoint(typeof(SentMessage), destinationEndpointName);
 
                 var advanced = configuration.AdvancedConfiguration;
                 advanced.SendFailedMessagesTo(ErrorQueueName);
-                advanced.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
+                advanced.RegisterComponents(c => c.AddSingleton(context));
                 return configuration;
             });
 

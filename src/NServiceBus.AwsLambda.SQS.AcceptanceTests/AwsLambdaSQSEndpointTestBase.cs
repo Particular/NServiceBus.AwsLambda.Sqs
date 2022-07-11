@@ -9,6 +9,7 @@
     using Amazon.Runtime;
     using Amazon.S3;
     using Amazon.S3.Model;
+    using Amazon.SimpleNotificationService;
     using Amazon.SQS;
     using Amazon.SQS.Model;
     using NUnit.Framework;
@@ -90,11 +91,12 @@
         {
             var endpointConfiguration = new EndpointConfiguration($"{QueueNamePrefix}sender");
             endpointConfiguration.SendOnly();
-            endpointConfiguration.UsePersistence<InMemoryPersistence>();
-            var transport = endpointConfiguration.UseTransport<SqsTransport>();
-            transport.ClientFactory(CreateSQSClient);
-            var s3 = transport.S3(BucketName, KeyPrefix);
-            s3.ClientFactory(CreateS3Client);
+            endpointConfiguration.UsePersistence<NonDurablePersistence>();
+            var sqsTransport = new SqsTransport(CreateSQSClient(), CreateSNSClient())
+            {
+                S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client())
+            };
+            endpointConfiguration.UseTransport(sqsTransport);
 
             var endpointInstance = await Endpoint.Start(endpointConfiguration)
                 .ConfigureAwait(false);
@@ -131,6 +133,12 @@
         {
             var credentials = new EnvironmentVariablesAWSCredentials();
             return new AmazonSQSClient(credentials);
+        }
+
+        public static IAmazonSimpleNotificationService CreateSNSClient()
+        {
+            var credentials = new EnvironmentVariablesAWSCredentials();
+            return new AmazonSimpleNotificationServiceClient(credentials);
         }
 
         public static IAmazonS3 CreateS3Client()
