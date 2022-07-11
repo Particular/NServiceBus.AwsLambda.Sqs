@@ -171,21 +171,19 @@
         async Task Initialize(AwsLambdaSQSEndpointConfiguration configuration)
         {
             var settingsHolder = configuration.AdvancedConfiguration.GetSettings();
-            var sqsClientFactory = settingsHolder.GetOrDefault<Func<IAmazonSQS>>(SettingsKeys.SqsClientFactory) ?? (() => new AmazonSQSClient());
 
-            sqsClient = sqsClientFactory();
+            sqsClient = configuration.Transport.SqsClient;
             awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
             queueUrl = await GetQueueUrl(settingsHolder.EndpointName()).ConfigureAwait(false);
             errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress()).ConfigureAwait(false);
 
-            s3BucketForLargeMessages = settingsHolder.GetOrDefault<string>(SettingsKeys.S3BucketForLargeMessages);
+            s3BucketForLargeMessages = configuration.Transport.S3?.BucketName;
             if (string.IsNullOrWhiteSpace(s3BucketForLargeMessages))
             {
                 return;
             }
 
-            var s3ClientFactory = settingsHolder.GetOrDefault<Func<IAmazonS3>>(SettingsKeys.S3ClientFactory) ?? (() => new AmazonS3Client());
-            s3Client = s3ClientFactory();
+            s3Client = configuration.Transport.S3.S3Client;
         }
 
         async Task<string> GetQueueUrl(string queueName)
