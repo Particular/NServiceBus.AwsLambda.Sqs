@@ -37,11 +37,9 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v2.1.0
         with:
-          dotnet-version: 5.0.x
-      - name: Setup .NET Core 2.1 runtime
-        uses: actions/setup-dotnet@v2.1.0
-        with:
-          dotnet-version: 2.1.x
+          dotnet-version: |
+            5.0.x
+            2.1.x
       - name: Build
         run: dotnet build src --configuration Release
       - name: Upload packages
@@ -51,5 +49,5 @@ jobs:
           name: NuGet packages
           path: nugets/
           retention-days: 7
-       - name: Run tests
-         uses: Particular/run-tests-action@v1.3.0
+      - name: Run tests
+        uses: Particular/run-tests-action@v1.3.0
