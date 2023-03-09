@@ -4,6 +4,8 @@ namespace NServiceBus.AwsLambda.SQS
     using Amazon.Lambda.Core;
     using NServiceBus.Logging;
 
+    using LogLevel = Logging.LogLevel;
+
     class LambdaLog : ILog
     {
         string name;
