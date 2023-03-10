@@ -20,13 +20,13 @@ namespace NServiceBus
     public class AwsLambdaSQSEndpointConfiguration
     {
         public AwsLambdaSQSEndpointConfiguration(string endpointName) { }
+        public AwsLambdaSQSEndpointConfiguration(string endpointName, Amazon.SQS.IAmazonSQS sqsClient, Amazon.SimpleNotificationService.IAmazonSimpleNotificationService snsClient) { }
         public NServiceBus.EndpointConfiguration AdvancedConfiguration { get; }
-        public NServiceBus.TransportExtensions<NServiceBus.SqsTransport> Transport { get; }
+        public NServiceBus.RoutingSettings<NServiceBus.SqsTransport> RoutingSettings { get; }
+        public NServiceBus.SqsTransport Transport { get; }
         public void DoNotSendMessagesToErrorQueue() { }
         public NServiceBus.Serialization.SerializationExtensions<T> UseSerialization<T>()
             where T : NServiceBus.Serialization.SerializationDefinition, new () { }
-        protected NServiceBus.TransportExtensions<TTransport> UseTransport<TTransport>()
-            where TTransport : NServiceBus.Transport.TransportDefinition, new () { }
     }
     public interface IAwsLambdaSQSEndpoint
     {

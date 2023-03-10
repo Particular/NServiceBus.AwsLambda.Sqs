@@ -3,7 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using DeliveryConstraints;
     using Performance.TimeToBeReceived;
     using Transport;
 
@@ -14,7 +13,7 @@
         {
         }
 
-        public TransportMessage(OutgoingMessage outgoingMessage, List<DeliveryConstraint> deliveryConstraints)
+        public TransportMessage(OutgoingMessage outgoingMessage, List<DispatchProperties> deliveryConstraints)
         {
             Headers = outgoingMessage.Headers;
 
@@ -31,7 +30,7 @@
                 TimeToBeReceived = discardConstraint.MaxTime.ToString();
             }
 
-            Body = outgoingMessage.Body != null ? Convert.ToBase64String(outgoingMessage.Body) : "empty message";
+            Body = !outgoingMessage.Body.IsEmpty ? Convert.ToBase64String(outgoingMessage.Body.Span) : "empty message";
         }
 
         public Dictionary<string, string> Headers { get; set; }

@@ -60,12 +60,14 @@
                     if (pipeline == null)
                     {
                         var configuration = configurationFactory(executionContext);
+                        var serverlessTransport = configuration.MakeServerless();
+
                         await Initialize(configuration).ConfigureAwait(false);
                         LogManager.GetLogger("Previews").Info("NServiceBus.AwsLambda.SQS is a preview package. Preview packages are licensed separately from the rest of the Particular Software platform and have different support guarantees. You can view the license at https://particular.net/eula/previews and the support policy at https://docs.particular.net/previews/support-policy. Customer adoption drives whether NServiceBus.AwsLambda.SQS will be incorporated into the Particular Software platform. Let us know you are using it, if you haven't already, by emailing us at support@particular.net.");
 
-                        endpoint = await Endpoint.Start(configuration.EndpointConfiguration).ConfigureAwait(false);
+                        endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token).ConfigureAwait(false);
 
-                        pipeline = configuration.PipelineInvoker;
+                        pipeline = serverlessTransport.PipelineInvoker;
                     }
                 }
                 finally
@@ -172,21 +174,21 @@
         async Task Initialize(AwsLambdaSQSEndpointConfiguration configuration)
         {
             var settingsHolder = configuration.AdvancedConfiguration.GetSettings();
-            var sqsClientFactory = settingsHolder.GetOrDefault<Func<IAmazonSQS>>(SettingsKeys.SqsClientFactory) ?? (() => new AmazonSQSClient());
 
-            sqsClient = sqsClientFactory();
+            sqsClient = configuration.Transport.SqsClient;
             awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
+
             queueUrl = await GetQueueUrl(settingsHolder.EndpointName()).ConfigureAwait(false);
             errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress()).ConfigureAwait(false);
 
-            s3BucketForLargeMessages = settingsHolder.GetOrDefault<string>(SettingsKeys.S3BucketForLargeMessages);
+
+
+            s3BucketForLargeMessages = configuration.Transport.S3?.BucketName;
             if (string.IsNullOrWhiteSpace(s3BucketForLargeMessages))
             {
                 return;
             }
-
-            var s3ClientFactory = settingsHolder.GetOrDefault<Func<IAmazonS3>>(SettingsKeys.S3ClientFactory) ?? (() => new AmazonS3Client());
-            s3Client = s3ClientFactory();
+            s3Client = configuration.Transport.S3?.S3Client;
         }
 
         async Task<string> GetQueueUrl(string queueName)
@@ -285,7 +287,7 @@
             return true;
         }
 
-        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, byte[] body, ILambdaContext lambdaContext, CancellationToken token)
+        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, ReadOnlyMemory<byte> body, ILambdaContext lambdaContext, CancellationToken token)
         {
             var immediateProcessingAttempts = 0;
             var messageProcessedOk = false;
@@ -295,20 +297,18 @@
             {
                 try
                 {
-                    using (var messageContextCancellationTokenSource = new CancellationTokenSource())
-                    {
-                        var messageContext = new MessageContext(
-                            nativeMessageId,
-                            new Dictionary<string, string>(headers),
-                            body,
-                            transportTransaction,
-                            messageContextCancellationTokenSource,
-                            new ContextBag());
+                    var messageContext = new MessageContext(
+                        nativeMessageId,
+                        new Dictionary<string, string>(headers),
+                        body,
+                        transportTransaction,
+                        queueUrl,
+                        new ContextBag());
 
-                        await Process(messageContext, lambdaContext).ConfigureAwait(false);
+                    await Process(messageContext, lambdaContext, token).ConfigureAwait(false);
 
-                        messageProcessedOk = !messageContextCancellationTokenSource.IsCancellationRequested;
-                    }
+                    messageProcessedOk = !token.IsCancellationRequested;
+
                 }
                 catch (Exception ex)
                     when (!(ex is OperationCanceledException && token.IsCancellationRequested))
@@ -324,7 +324,10 @@
                             nativeMessageId,
                             body,
                             transportTransaction,
-                            immediateProcessingAttempts);
+                            immediateProcessingAttempts,
+                            queueUrl,
+                            new ContextBag()
+                            );
 
                         errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext).ConfigureAwait(false);
                     }
@@ -339,9 +342,9 @@
             }
         }
 
-        async Task Process(MessageContext messageContext, ILambdaContext executionContext)
+        async Task Process(MessageContext messageContext, ILambdaContext executionContext, CancellationToken cancellationToken)
         {
-            await InitializeEndpointIfNecessary(executionContext, messageContext.ReceiveCancellationTokenSource.Token).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(executionContext, cancellationToken).ConfigureAwait(false);
             await pipeline.PushMessage(messageContext).ConfigureAwait(false);
         }
 

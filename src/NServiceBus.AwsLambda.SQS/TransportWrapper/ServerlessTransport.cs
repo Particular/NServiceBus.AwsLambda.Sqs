@@ -1,26 +1,53 @@
 ﻿namespace NServiceBus.AwsLambda.SQS.TransportWrapper
 {
-    using Settings;
+    using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using NServiceBus;
     using Transport;
 
     class ServerlessTransport<TBaseTransport> : TransportDefinition
-        where TBaseTransport : TransportDefinition, new()
+        where TBaseTransport : TransportDefinition
     {
-        public ServerlessTransport()
+        // HINT: This constant is defined in NServiceBus but is not exposed
+        const string MainReceiverId = "Main";
+
+        public ServerlessTransport(TBaseTransport baseTransport)
+            : base(baseTransport.TransportTransactionMode, baseTransport.SupportsDelayedDelivery, baseTransport.SupportsPublishSubscribe, baseTransport.SupportsTTBR)
         {
-            baseTransport = new TBaseTransport();
+            BaseTransport = baseTransport;
         }
 
-        public override string ExampleConnectionStringForErrorMessage { get; } = string.Empty;
+        public TBaseTransport BaseTransport { get; }
 
-        public override bool RequiresConnectionString => baseTransport.RequiresConnectionString;
+        public PipelineInvoker PipelineInvoker { get; private set; }
 
-        public override TransportInfrastructure Initialize(SettingsHolder settings, string connectionString)
+        public override async Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
         {
-            var baseTransportInfrastructure = baseTransport.Initialize(settings, connectionString);
-            return new ServerlessTransportInfrastructure<TBaseTransport>(baseTransportInfrastructure, settings);
+            //   hostSettings.
+            var baseTransportInfrastructure = await BaseTransport.Initialize(hostSettings, receivers, sendingAddresses, cancellationToken).ConfigureAwait(false);
+            var serverlessTransportInfrastructure = new ServerlessTransportInfrastructure<TBaseTransport>(baseTransportInfrastructure);
+            PipelineInvoker = (PipelineInvoker)serverlessTransportInfrastructure.Receivers[MainReceiverId];
+
+            return serverlessTransportInfrastructure;
+
         }
 
-        readonly TBaseTransport baseTransport;
+#pragma warning disable CS0672 // Member overrides obsolete member
+#pragma warning disable CS0618 // Type or memeber is obsolete
+
+        public override string ToTransportAddress(QueueAddress address) => BaseTransport.ToTransportAddress(address);
+
+#pragma warning restore CS0618 // Type or memeber is obsolete
+#pragma warning restore CS0672 // Member overrides obsolete member
+
+
+        public override IReadOnlyCollection<TransportTransactionMode> GetSupportedTransactionModes() => supportedTransactionModes;
+
+        readonly TransportTransactionMode[] supportedTransactionModes =
+        {
+            TransportTransactionMode.None,
+            TransportTransactionMode.ReceiveOnly
+        };
     }
 }

@@ -1,30 +1,40 @@
 ﻿namespace NServiceBus.AwsLambda.SQS.TransportWrapper
 {
-    using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Transport;
 
-    class PipelineInvoker : IPushMessages
+    class PipelineInvoker : IMessageReceiver
     {
-        Task IPushMessages.Init(Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError, PushSettings settings)
+        public PipelineInvoker(IMessageReceiver baseTransportReceiver)
         {
-            if (this.onMessage == null)
-            {
-                // The core ReceiveComponent calls TransportInfrastructure.MessagePumpFactory() multiple times
-                // the first invocation is for the main pipeline, ignore all other pipelines as we don't want to manually invoke them.
-                this.onMessage = onMessage;
+            this.baseTransportReceiver = baseTransportReceiver;
+        }
 
-                this.onError = onError;
-            }
+        public ISubscriptionManager Subscriptions => baseTransportReceiver.Subscriptions;
 
+
+        public string Id => baseTransportReceiver.Id;
+
+        public string ReceiveAddress => baseTransportReceiver.ReceiveAddress;
+
+        Task IMessageReceiver.Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken)
+        {
+            this.onMessage = onMessage;
+            this.onError = onError;
+
+            return baseTransportReceiver?.Initialize(limitations,
+                (_, __) => Task.CompletedTask,
+                (_, __) => Task.FromResult(ErrorHandleResult.Handled),
+                cancellationToken) ?? Task.CompletedTask;
+        }
+
+        Task IMessageReceiver.StartReceive(CancellationToken cancellationToken)
+        {
             return Task.CompletedTask;
         }
 
-        void IPushMessages.Start(PushRuntimeSettings limitations)
-        {
-        }
-
-        Task IPushMessages.Stop()
+        Task IMessageReceiver.StopReceive(CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
@@ -34,12 +44,19 @@
             return onError(errorContext);
         }
 
+        Task IMessageReceiver.ChangeConcurrency(PushRuntimeSettings limitations, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task PushMessage(MessageContext messageContext)
         {
             return onMessage.Invoke(messageContext);
         }
 
-        Func<MessageContext, Task> onMessage;
-        Func<ErrorContext, Task<ErrorHandleResult>> onError;
+        OnMessage onMessage;
+        OnError onError;
+
+        readonly IMessageReceiver baseTransportReceiver;
     }
 }
