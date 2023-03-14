@@ -92,7 +92,7 @@
             var endpointConfiguration = new EndpointConfiguration($"{QueueNamePrefix}sender");
             endpointConfiguration.SendOnly();
 
-            var transport = new SqsTransport(CreateSQSClient(), null)
+            var transport = new SqsTransport(CreateSQSClient(), CreateSNSClient())
             {
                 S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client())
             };
