@@ -2,8 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
-    using Performance.TimeToBeReceived;
     using Transport;
 
     class TransportMessage
@@ -13,7 +11,7 @@
         {
         }
 
-        public TransportMessage(OutgoingMessage outgoingMessage, List<DispatchProperties> deliveryConstraints)
+        public TransportMessage(OutgoingMessage outgoingMessage, DispatchProperties deliveryConstraints)
         {
             Headers = outgoingMessage.Headers;
 
@@ -24,10 +22,9 @@
                 Headers[NServiceBus.Headers.MessageId] = messageId;
             }
 
-            var discardConstraint = deliveryConstraints.OfType<DiscardIfNotReceivedBefore>().SingleOrDefault();
-            if (discardConstraint != null)
+            if (deliveryConstraints.DiscardIfNotReceivedBefore != null)
             {
-                TimeToBeReceived = discardConstraint.MaxTime.ToString();
+                TimeToBeReceived = deliveryConstraints.DiscardIfNotReceivedBefore.MaxTime.ToString();
             }
 
             Body = !outgoingMessage.Body.IsEmpty ? Convert.ToBase64String(outgoingMessage.Body.Span) : "empty message";
