@@ -56,7 +56,7 @@
             RoutingSettings = EndpointConfiguration.UseTransport(Transport);
 
             // by default do not write custom diagnostics to file because lambda is readonly
-            AdvancedConfiguration.CustomDiagnosticsWriter((diagnostics, token) => Task.CompletedTask);
+            AdvancedConfiguration.CustomDiagnosticsWriter((_, _) => Task.CompletedTask);
 
             TrySpecifyDefaultLicense();
         }
