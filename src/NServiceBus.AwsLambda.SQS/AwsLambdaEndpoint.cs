@@ -181,8 +181,6 @@
             queueUrl = await GetQueueUrl(settingsHolder.EndpointName()).ConfigureAwait(false);
             errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress()).ConfigureAwait(false);
 
-
-
             s3BucketForLargeMessages = configuration.Transport.S3?.BucketName;
             if (string.IsNullOrWhiteSpace(s3BucketForLargeMessages))
             {
