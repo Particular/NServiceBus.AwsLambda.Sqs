@@ -229,7 +229,7 @@
             }
             catch (OperationCanceledException)
             {
-                return;
+                throw;
             }
             catch (Exception ex)
             {
@@ -288,13 +288,15 @@
         async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, ReadOnlyMemory<byte> body, ILambdaContext lambdaContext, CancellationToken token)
         {
             var immediateProcessingAttempts = 0;
-            var messageProcessedOk = false;
             var errorHandled = false;
+            var messageProcessedOk = false;
 
             while (!errorHandled && !messageProcessedOk)
             {
                 try
                 {
+                    token.ThrowIfCancellationRequested();
+
                     var messageContext = new MessageContext(
                         nativeMessageId,
                         new Dictionary<string, string>(headers),
@@ -305,8 +307,7 @@
 
                     await Process(messageContext, lambdaContext, token).ConfigureAwait(false);
 
-                    messageProcessedOk = !token.IsCancellationRequested;
-
+                    messageProcessedOk = true;
                 }
                 catch (Exception ex)
                     when (!(ex is OperationCanceledException && token.IsCancellationRequested))
@@ -410,7 +411,7 @@
                     Logger.Warn($"Error returning poison message back to input queue at url {queueUrl}. Poison message will become available at the input queue again after the visibility timeout expires.", changeMessageVisibilityEx);
                 }
 
-                return;
+                throw;
             }
 
             try
