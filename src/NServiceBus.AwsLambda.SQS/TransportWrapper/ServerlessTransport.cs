@@ -6,19 +6,18 @@
     using NServiceBus;
     using Transport;
 
-    class ServerlessTransport<TBaseTransport> : TransportDefinition
-        where TBaseTransport : TransportDefinition
+    class ServerlessTransport : TransportDefinition
     {
         // HINT: This constant is defined in NServiceBus but is not exposed
         const string MainReceiverId = "Main";
 
-        public ServerlessTransport(TBaseTransport baseTransport)
+        public ServerlessTransport(TransportDefinition baseTransport)
             : base(baseTransport.TransportTransactionMode, baseTransport.SupportsDelayedDelivery, baseTransport.SupportsPublishSubscribe, baseTransport.SupportsTTBR)
         {
             BaseTransport = baseTransport;
         }
 
-        public TBaseTransport BaseTransport { get; }
+        public TransportDefinition BaseTransport { get; }
 
         public PipelineInvoker PipelineInvoker { get; private set; }
 
@@ -26,7 +25,7 @@
         {
             //   hostSettings.
             var baseTransportInfrastructure = await BaseTransport.Initialize(hostSettings, receivers, sendingAddresses, cancellationToken).ConfigureAwait(false);
-            var serverlessTransportInfrastructure = new ServerlessTransportInfrastructure<TBaseTransport>(baseTransportInfrastructure);
+            var serverlessTransportInfrastructure = new ServerlessTransportInfrastructure(baseTransportInfrastructure);
             PipelineInvoker = (PipelineInvoker)serverlessTransportInfrastructure.Receivers[MainReceiverId];
 
             return serverlessTransportInfrastructure;

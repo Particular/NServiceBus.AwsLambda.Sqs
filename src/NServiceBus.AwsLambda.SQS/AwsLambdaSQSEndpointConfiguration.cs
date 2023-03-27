@@ -83,9 +83,9 @@
 
         internal EndpointConfiguration EndpointConfiguration { get; }
 
-        internal ServerlessTransport<SqsTransport> MakeServerless()
+        internal ServerlessTransport MakeServerless()
         {
-            var serverlessTransport = new ServerlessTransport<SqsTransport>(Transport);
+            var serverlessTransport = new ServerlessTransport(Transport);
             EndpointConfiguration.UseTransport(serverlessTransport);
 
             return serverlessTransport;

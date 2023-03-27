@@ -5,7 +5,7 @@
     using System.Threading.Tasks;
     using Transport;
 
-    class ServerlessTransportInfrastructure<TBaseInfrastructure> : TransportInfrastructure where TBaseInfrastructure : TransportDefinition
+    class ServerlessTransportInfrastructure : TransportInfrastructure
     {
         public ServerlessTransportInfrastructure(TransportInfrastructure baseTransportInfrastructure)
         {
