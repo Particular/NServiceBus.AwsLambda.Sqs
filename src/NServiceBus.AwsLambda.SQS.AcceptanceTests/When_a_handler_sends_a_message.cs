@@ -15,14 +15,17 @@
 
             var destinationEndpointName = $"{QueueNamePrefix}DestinationEndpoint";
             RegisterQueueNameToCleanup(destinationEndpointName);
+            RegisterQueueNameToCleanup(destinationEndpointName + DelayedDeliveryQueueSuffix);
 
             var destinationConfiguration = new EndpointConfiguration(destinationEndpointName);
 
-            var destinationTransport = destinationConfiguration.UseTransport<SqsTransport>();
-            destinationTransport.ClientFactory(CreateSQSClient);
+            var destinationTransport = new SqsTransport(CreateSQSClient(), CreateSNSClient());
+
             destinationConfiguration.SendFailedMessagesTo(ErrorQueueName);
             destinationConfiguration.EnableInstallers();
             destinationConfiguration.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
+            destinationConfiguration.UseTransport(destinationTransport);
+
             var destinationEndpoint = await Endpoint.Start(destinationConfiguration);
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>

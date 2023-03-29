@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
@@ -17,7 +18,13 @@
     [TestFixture]
     class AwsLambdaSQSEndpointTestBase
     {
+        protected const string DelayedDeliveryQueueSuffix = "-delay.fifo";
+        const int QueueDelayInSeconds = 900; // 15 * 60
+
         protected string QueueName { get; set; }
+
+        protected string DelayQueueName { get; set; }
+
         protected string ErrorQueueName { get; set; }
 
         protected string QueueNamePrefix { get; set; }
@@ -52,6 +59,17 @@
                 }
             });
             RegisterQueueNameToCleanup(ErrorQueueName);
+            DelayQueueName = $"{QueueName}{DelayedDeliveryQueueSuffix}";
+            _ = await sqsClient.CreateQueueAsync(new CreateQueueRequest(DelayQueueName)
+            {
+                Attributes = new Dictionary<string, string>
+                {
+                    { "FifoQueue", "true" },
+                    { QueueAttributeName.DelaySeconds, QueueDelayInSeconds.ToString(CultureInfo.InvariantCulture)}
+                }
+            });
+            RegisterQueueNameToCleanup(DelayQueueName);
+
             s3Client = CreateS3Client();
             KeyPrefix = QueueNamePrefix;
         }
