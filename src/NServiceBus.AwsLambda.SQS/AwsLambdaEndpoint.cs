@@ -6,7 +6,6 @@
     using System.Threading.Tasks;
     using Amazon.Lambda.Core;
     using Amazon.Lambda.SQSEvents;
-    using Amazon.Runtime;
     using Amazon.S3;
     using Amazon.SQS;
     using Amazon.SQS.Model;
@@ -175,7 +174,6 @@
             var settingsHolder = configuration.AdvancedConfiguration.GetSettings();
 
             sqsClient = configuration.Transport.SqsClient;
-            awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
 
             queueUrl = await GetQueueUrl(settingsHolder.EndpointName()).ConfigureAwait(false);
             errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress()).ConfigureAwait(false);
@@ -190,14 +188,14 @@
 
         async Task<string> GetQueueUrl(string queueName)
         {
-            var sanitizedErrorQueueName = QueueNameHelper.GetSanitizedQueueName(queueName);
+            var sanitizedQueueName = QueueNameHelper.GetSanitizedQueueName(queueName);
             try
             {
-                return (await sqsClient.GetQueueUrlAsync(sanitizedErrorQueueName).ConfigureAwait(false)).QueueUrl;
+                return (await sqsClient.GetQueueUrlAsync(sanitizedQueueName).ConfigureAwait(false)).QueueUrl;
             }
             catch (Exception e)
             {
-                Logger.Error($"Failed to obtain the queue URL for queue {sanitizedErrorQueueName} (derived from configured name {queueName}).", e);
+                Logger.Error($"Failed to obtain the queue URL for queue {sanitizedQueueName} (derived from configured name {queueName}).", e);
                 throw;
             }
         }
@@ -245,7 +243,7 @@
                 return;
             }
 
-            if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, CorrectClockSkew.GetClockCorrectionForEndpoint(awsEndpointUrl)))
+            if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, sqsClient.Config.ClockOffset))
             {
                 // here we also want to use the native message id because the core demands it like that
                 await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, lambdaContext, token).ConfigureAwait(false);
@@ -450,7 +448,6 @@
         IAmazonSQS sqsClient;
         IAmazonS3 s3Client;
         string s3BucketForLargeMessages;
-        string awsEndpointUrl;
         string queueUrl;
         string errorQueueUrl;
 
