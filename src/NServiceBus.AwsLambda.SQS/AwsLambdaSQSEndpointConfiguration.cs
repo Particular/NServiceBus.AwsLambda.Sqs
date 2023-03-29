@@ -37,7 +37,7 @@
 
             recoverabilityPolicy.SendFailedMessagesToErrorQueue = true;
 
-            //make sure a call to "onError" will move the message to the error queue.
+            // delayed delivery is disabled by default as the required FIFO queue might not exist
             EndpointConfiguration.Recoverability()
                 .Delayed(c => c.NumberOfRetries(0))
                 .CustomPolicy(recoverabilityPolicy.Invoke);
