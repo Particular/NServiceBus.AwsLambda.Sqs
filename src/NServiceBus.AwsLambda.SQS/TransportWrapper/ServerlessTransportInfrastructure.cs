@@ -14,10 +14,6 @@
             Receivers = baseTransportInfrastructure.Receivers.ToDictionary(r => r.Key, r => (IMessageReceiver)new PipelineInvoker(r.Value));
         }
 
-        //TODO: Is this still necessary?
-        //support ReceiveOnly so that we can use immediate retries
-        public TransportTransactionMode TransactionMode { get; } = TransportTransactionMode.ReceiveOnly;
-
         public override Task Shutdown(CancellationToken cancellationToken = default) => baseTransportInfrastructure.Shutdown(cancellationToken);
 
         public override string ToTransportAddress(QueueAddress address) => baseTransportInfrastructure.ToTransportAddress(address);
