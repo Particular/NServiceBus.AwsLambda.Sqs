@@ -22,10 +22,11 @@
         {
             this.onMessage = onMessage;
             this.onError = onError;
+            var errorHandledResultTask = Task.FromResult(ErrorHandleResult.Handled);
 
             return baseTransportReceiver?.Initialize(limitations,
                 (_, __) => Task.CompletedTask,
-                (_, __) => Task.FromResult(ErrorHandleResult.Handled),
+                (_, __) => errorHandledResultTask,
                 cancellationToken) ?? Task.CompletedTask;
         }
 
