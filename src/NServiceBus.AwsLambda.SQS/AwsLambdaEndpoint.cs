@@ -286,9 +286,8 @@
         {
             var immediateProcessingAttempts = 0;
             var errorHandled = false;
-            var messageProcessedOk = false;
 
-            while (!errorHandled && !messageProcessedOk)
+            while (!errorHandled)
             {
                 try
                 {
@@ -304,7 +303,7 @@
 
                     await Process(messageContext, lambdaContext, token).ConfigureAwait(false);
 
-                    messageProcessedOk = true;
+                    return;
                 }
                 catch (Exception ex)
                     when (!(ex is OperationCanceledException && token.IsCancellationRequested))
