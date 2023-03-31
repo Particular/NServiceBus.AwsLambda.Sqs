@@ -322,8 +322,7 @@
                             transportTransaction,
                             immediateProcessingAttempts,
                             queueUrl,
-                            new ContextBag()
-                            );
+                            new ContextBag());
 
                         errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext).ConfigureAwait(false);
                     }
