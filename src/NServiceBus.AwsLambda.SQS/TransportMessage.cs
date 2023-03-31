@@ -11,7 +11,7 @@
         {
         }
 
-        public TransportMessage(OutgoingMessage outgoingMessage, DispatchProperties deliveryConstraints)
+        public TransportMessage(OutgoingMessage outgoingMessage, DispatchProperties properties)
         {
             Headers = outgoingMessage.Headers;
 
@@ -22,9 +22,9 @@
                 Headers[NServiceBus.Headers.MessageId] = messageId;
             }
 
-            if (deliveryConstraints.DiscardIfNotReceivedBefore != null)
+            if (properties.DiscardIfNotReceivedBefore != null)
             {
-                TimeToBeReceived = deliveryConstraints.DiscardIfNotReceivedBefore.MaxTime.ToString();
+                TimeToBeReceived = properties.DiscardIfNotReceivedBefore.MaxTime.ToString();
             }
 
             Body = !outgoingMessage.Body.IsEmpty ? Convert.ToBase64String(outgoingMessage.Body.Span) : "empty message";
