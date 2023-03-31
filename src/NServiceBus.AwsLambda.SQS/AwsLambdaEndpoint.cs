@@ -59,9 +59,8 @@
                     if (pipeline == null)
                     {
                         var configuration = configurationFactory(executionContext);
-                        var serverlessTransport = configuration.MakeServerless();
 
-                        await Initialize(configuration).ConfigureAwait(false);
+                        var serverlessTransport = await Initialize(configuration).ConfigureAwait(false);
 
                         endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token).ConfigureAwait(false);
 
@@ -169,7 +168,7 @@
             await endpoint.Unsubscribe(eventType).ConfigureAwait(false);
         }
 
-        async Task Initialize(AwsLambdaSQSEndpointConfiguration configuration)
+        async Task<ServerlessTransport> Initialize(AwsLambdaSQSEndpointConfiguration configuration)
         {
             var settingsHolder = configuration.AdvancedConfiguration.GetSettings();
 
@@ -179,11 +178,16 @@
             errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress()).ConfigureAwait(false);
 
             s3BucketForLargeMessages = configuration.Transport.S3?.BucketName;
-            if (string.IsNullOrWhiteSpace(s3BucketForLargeMessages))
+
+            if (!string.IsNullOrWhiteSpace(s3BucketForLargeMessages))
             {
-                return;
+                s3Client = configuration.Transport.S3?.S3Client;
             }
-            s3Client = configuration.Transport.S3?.S3Client;
+
+            var serverlessTransport = new ServerlessTransport(configuration.Transport);
+            configuration.EndpointConfiguration.UseTransport(serverlessTransport);
+
+            return serverlessTransport;
         }
 
         async Task<string> GetQueueUrl(string queueName)

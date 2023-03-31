@@ -5,7 +5,7 @@
     using Amazon.SimpleNotificationService;
     using Amazon.SQS;
     using AwsLambda.SQS;
-    using NServiceBus.AwsLambda.SQS.TransportWrapper;
+
     using NServiceBus.Logging;
     using Serialization;
 
@@ -82,14 +82,6 @@
         public SqsTransport Transport { get; }
 
         internal EndpointConfiguration EndpointConfiguration { get; }
-
-        internal ServerlessTransport MakeServerless()
-        {
-            var serverlessTransport = new ServerlessTransport(Transport);
-            EndpointConfiguration.UseTransport(serverlessTransport);
-
-            return serverlessTransport;
-        }
 
         /// <summary>
         /// Gives access to the underlying endpoint configuration for advanced configuration options.
