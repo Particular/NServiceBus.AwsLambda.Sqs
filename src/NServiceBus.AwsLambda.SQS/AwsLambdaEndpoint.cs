@@ -1,13 +1,13 @@
 ﻿namespace NServiceBus
 {
     using System;
+    using System.Buffers;
     using System.Collections.Generic;
     using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
     using Amazon.Lambda.Core;
     using Amazon.Lambda.SQSEvents;
-    using Amazon.S3;
     using Amazon.SQS;
     using Amazon.SQS.Model;
     using AwsLambda.SQS;
@@ -202,12 +202,7 @@
             errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress())
                 .ConfigureAwait(false);
 
-            s3BucketForLargeMessages = configuration.Transport.S3?.BucketName;
-
-            if (!string.IsNullOrWhiteSpace(s3BucketForLargeMessages))
-            {
-                s3Client = configuration.Transport.S3?.S3Client;
-            }
+            s3Settings = configuration.Transport.S3;
 
             var serverlessTransport = new ServerlessTransport(configuration.Transport);
             configuration.EndpointConfiguration.UseTransport(serverlessTransport);
@@ -231,7 +226,9 @@
 
         async Task ProcessMessage(SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
-            byte[] messageBody = null;
+            var arrayPool = ArrayPool<byte>.Shared;
+            ReadOnlyMemory<byte> messageBody = null;
+            byte[] messageBodyBuffer = null;
             TransportMessage transportMessage = null;
             Exception exception = null;
             var nativeMessageId = receivedMessage.MessageId;
@@ -240,44 +237,101 @@
 
             try
             {
-                if (receivedMessage.MessageAttributes.TryGetValue(Headers.MessageId, out var messageIdAttribute))
+                try
                 {
-                    messageId = messageIdAttribute.StringValue;
+                    if (receivedMessage.MessageAttributes.TryGetValue(Headers.MessageId, out var messageIdAttribute))
+                    {
+                        messageId = messageIdAttribute.StringValue;
+                    }
+                    else
+                    {
+                        messageId = nativeMessageId;
+                    }
+
+                    if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.Headers, out var headersAttribute))
+                    {
+                        transportMessage = new TransportMessage
+                        {
+                            Headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersAttribute.StringValue) ?? new Dictionary<string, string>(),
+                            Body = receivedMessage.Body
+                        };
+                        transportMessage.Headers[Headers.MessageId] = messageId;
+                        if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.S3BodyKey, out var s3BodyKey))
+                        {
+                            transportMessage.Headers[TransportHeaders.S3BodyKey] = s3BodyKey.StringValue;
+                            transportMessage.S3BodyKey = s3BodyKey.StringValue;
+                        }
+                    }
+                    else
+                    {
+                        // When the MessageTypeFullName attribute is available, we're assuming native integration
+                        if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.MessageTypeFullName,
+                                out var enclosedMessageType))
+                        {
+                            var headers = new Dictionary<string, string>
+                            {
+                                { Headers.MessageId, messageId },
+                                { Headers.EnclosedMessageTypes, enclosedMessageType.StringValue },
+                                {
+                                    TransportHeaders.MessageTypeFullName, enclosedMessageType.StringValue
+                                } // we're copying over the value of the native message attribute into the headers, converting this into a nsb message
+                            };
+
+                            if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.S3BodyKey,
+                                    out var s3BodyKey))
+                            {
+                                headers.Add(TransportHeaders.S3BodyKey, s3BodyKey.StringValue);
+                            }
+
+                            transportMessage = new TransportMessage
+                            {
+                                Headers = headers,
+                                S3BodyKey = s3BodyKey?.StringValue,
+                                Body = receivedMessage.Body
+                            };
+                        }
+                        else
+                        {
+                            transportMessage = JsonSerializer.Deserialize<TransportMessage>(receivedMessage.Body,
+                                transportMessageSerializerOptions);
+                        }
+                    }
+
+                    (messageBody, messageBodyBuffer) = await transportMessage.RetrieveBody(messageId, s3Settings, arrayPool, token).ConfigureAwait(false);
                 }
-                else
+                catch (Exception ex) when (!ex.IsCausedBy(token))
                 {
-                    messageId = nativeMessageId;
+                    // Can't deserialize. This is a poison message
+                    exception = ex;
+                    isPoisonMessage = true;
                 }
 
-                transportMessage = JsonSerializer.Deserialize<TransportMessage>(receivedMessage.Body, transportMessageSerializerOptions);
+                if (isPoisonMessage || transportMessage == null)
+                {
+                    LogPoisonMessage(messageId, exception);
 
-                messageBody = await transportMessage.RetrieveBody(s3Client, s3BucketForLargeMessages, token).ConfigureAwait(false);
+                    await MovePoisonMessageToErrorQueue(receivedMessage, messageId).ConfigureAwait(false);
+                    return;
+                }
+
+                if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, sqsClient.Config.ClockOffset))
+                {
+                    // here we also want to use the native message id because the core demands it like that
+                    await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, lambdaContext, token).ConfigureAwait(false);
+                }
+
+                // Always delete the message from the queue.
+                // If processing failed, the onError handler will have moved the message
+                // to a retry queue.
+                await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey).ConfigureAwait(false);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            finally
             {
-                // Can't deserialize. This is a poison message
-                exception = ex;
-                isPoisonMessage = true;
+                if (messageBodyBuffer != null)
+                {
+                    arrayPool.Return(messageBodyBuffer, clearArray: true);
+                }
             }
-
-            if (isPoisonMessage || messageBody == null || transportMessage == null)
-            {
-                LogPoisonMessage(messageId, exception);
-
-                await MovePoisonMessageToErrorQueue(receivedMessage, messageId).ConfigureAwait(false);
-                return;
-            }
-
-            if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, sqsClient.Config.ClockOffset))
-            {
-                // here we also want to use the native message id because the core demands it like that
-                await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, lambdaContext, token).ConfigureAwait(false);
-            }
-
-            // Always delete the message from the queue.
-            // If processing failed, the onError handler will have moved the message
-            // to a retry queue.
-            await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey).ConfigureAwait(false);
         }
 
         static bool IsMessageExpired(SQSEvent.SQSMessage receivedMessage, Dictionary<string, string> headers, string messageId, TimeSpan clockOffset)
@@ -294,7 +348,7 @@
                 return false;
             }
 
-            var sentDateTime = receivedMessage.GetAdjustedDateTimeFromServerSetAttributes(clockOffset);
+            var sentDateTime = receivedMessage.GetAdjustedDateTimeFromServerSetAttributes("SentTimestamp", clockOffset);
             var expiresAt = sentDateTime + timeToBeReceived;
             var utcNow = DateTime.UtcNow;
             if (expiresAt > utcNow)
@@ -481,8 +535,7 @@
         PipelineInvoker pipeline;
         IEndpointInstance endpoint;
         IAmazonSQS sqsClient;
-        IAmazonS3 s3Client;
-        string s3BucketForLargeMessages;
+        S3Settings s3Settings;
         string queueUrl;
         string errorQueueUrl;
 
