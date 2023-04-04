@@ -4,6 +4,8 @@ namespace NServiceBus.AwsLambda.SQS
     using Amazon.Lambda.Core;
     using NServiceBus.Logging;
 
+    using LogLevel = Logging.LogLevel;
+
     class LambdaLog : ILog
     {
         string name;
@@ -25,13 +27,10 @@ namespace NServiceBus.AwsLambda.SQS
         }
 
         void Write(string level, string message, Exception exception)
-        {
-            LambdaLogger.Log($"{name}. {level}. {message}. Exception: {exception}");
-        }
+            => LambdaLogger.Log($"{name}. {level}. {message}. Exception: {exception}");
+
         void Write(string level, string message)
-        {
-            LambdaLogger.Log($"{name}. {level}. {message}.");
-        }
+            => LambdaLogger.Log($"{name}. {level}. {message}.");
 
         void Write(string level, string format, params object[] args)
         {

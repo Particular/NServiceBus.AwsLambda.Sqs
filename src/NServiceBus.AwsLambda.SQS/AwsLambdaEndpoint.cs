@@ -1,13 +1,13 @@
 ﻿namespace NServiceBus
 {
     using System;
+    using System.Buffers;
     using System.Collections.Generic;
+    using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
     using Amazon.Lambda.Core;
     using Amazon.Lambda.SQSEvents;
-    using Amazon.Runtime;
-    using Amazon.S3;
     using Amazon.SQS;
     using Amazon.SQS.Model;
     using AwsLambda.SQS;
@@ -15,7 +15,6 @@
     using Configuration.AdvancedExtensibility;
     using Extensibility;
     using Logging;
-    using SimpleJson;
     using Transport;
 
     /// <summary>
@@ -38,7 +37,8 @@
         public async Task Process(SQSEvent @event, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
         {
             // enforce early initialization instead of lazy during process so that the necessary clients can be created.
-            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
+                .ConfigureAwait(false);
 
             var processTasks = new List<Task>();
 
@@ -47,30 +47,34 @@
                 processTasks.Add(ProcessMessage(receivedMessage, lambdaContext, cancellationToken));
             }
 
-            await Task.WhenAll(processTasks).ConfigureAwait(false);
+            await Task.WhenAll(processTasks)
+                .ConfigureAwait(false);
         }
 
         async Task InitializeEndpointIfNecessary(ILambdaContext executionContext, CancellationToken token = default)
         {
             if (pipeline == null)
             {
-                await semaphoreLock.WaitAsync(token).ConfigureAwait(false);
+                await semaphoreLock.WaitAsync(token)
+                    .ConfigureAwait(false);
                 try
                 {
                     if (pipeline == null)
                     {
                         var configuration = configurationFactory(executionContext);
-                        await Initialize(configuration).ConfigureAwait(false);
-                        LogManager.GetLogger("Previews").Info("NServiceBus.AwsLambda.SQS is a preview package. Preview packages are licensed separately from the rest of the Particular Software platform and have different support guarantees. You can view the license at https://particular.net/eula/previews and the support policy at https://docs.particular.net/previews/support-policy. Customer adoption drives whether NServiceBus.AwsLambda.SQS will be incorporated into the Particular Software platform. Let us know you are using it, if you haven't already, by emailing us at support@particular.net.");
 
-                        endpoint = await Endpoint.Start(configuration.EndpointConfiguration).ConfigureAwait(false);
+                        var serverlessTransport = await Initialize(configuration)
+                            .ConfigureAwait(false);
 
-                        pipeline = configuration.PipelineInvoker;
+                        endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token)
+                            .ConfigureAwait(false);
+
+                        pipeline = serverlessTransport.PipelineInvoker;
                     }
                 }
                 finally
                 {
-                    semaphoreLock.Release();
+                    _ = semaphoreLock.Release();
                 }
             }
         }
@@ -85,127 +89,146 @@
 
         /// <inheritdoc />
         public Task Send(object message, ILambdaContext lambdaContext)
-        {
-            return Send(message, new SendOptions(), lambdaContext);
-        }
+            => Send(message, new SendOptions(), lambdaContext);
 
         /// <inheritdoc />
         public async Task Send<T>(Action<T> messageConstructor, SendOptions options, ILambdaContext lambdaContext)
         {
-            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(lambdaContext)
+                .ConfigureAwait(false);
 
-            await endpoint.Send(messageConstructor, options).ConfigureAwait(false);
+            await endpoint.Send(messageConstructor, options)
+                .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public async Task Send<T>(Action<T> messageConstructor, ILambdaContext lambdaContext)
         {
-            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(lambdaContext)
+                .ConfigureAwait(false);
 
-            await Send(messageConstructor, new SendOptions(), lambdaContext).ConfigureAwait(false);
+            await Send(messageConstructor, new SendOptions(), lambdaContext)
+                .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public async Task Publish(object message, PublishOptions options, ILambdaContext lambdaContext)
         {
-            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(lambdaContext)
+                .ConfigureAwait(false);
 
-            await endpoint.Publish(message, options).ConfigureAwait(false);
+            await endpoint.Publish(message, options)
+                .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public async Task Publish<T>(Action<T> messageConstructor, PublishOptions options, ILambdaContext lambdaContext)
         {
-            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(lambdaContext)
+                .ConfigureAwait(false);
 
-            await endpoint.Publish(messageConstructor, options).ConfigureAwait(false);
+            await endpoint.Publish(messageConstructor, options)
+                .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public async Task Publish(object message, ILambdaContext lambdaContext)
         {
-            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(lambdaContext)
+                .ConfigureAwait(false);
 
-            await endpoint.Publish(message).ConfigureAwait(false);
+            await endpoint.Publish(message)
+                .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public async Task Publish<T>(Action<T> messageConstructor, ILambdaContext lambdaContext)
         {
-            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(lambdaContext)
+                .ConfigureAwait(false);
 
-            await endpoint.Publish(messageConstructor).ConfigureAwait(false);
+            await endpoint.Publish(messageConstructor)
+                .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public async Task Subscribe(Type eventType, SubscribeOptions options, ILambdaContext lambdaContext)
         {
-            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(lambdaContext)
+                .ConfigureAwait(false);
 
-            await endpoint.Subscribe(eventType, options).ConfigureAwait(false);
+            await endpoint.Subscribe(eventType, options)
+                .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public async Task Subscribe(Type eventType, ILambdaContext lambdaContext)
         {
-            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(lambdaContext)
+                .ConfigureAwait(false);
 
-            await endpoint.Subscribe(eventType).ConfigureAwait(false);
+            await endpoint.Subscribe(eventType)
+                .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public async Task Unsubscribe(Type eventType, UnsubscribeOptions options, ILambdaContext lambdaContext)
         {
-            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(lambdaContext)
+                .ConfigureAwait(false);
 
-            await endpoint.Unsubscribe(eventType, options).ConfigureAwait(false);
+            await endpoint.Unsubscribe(eventType, options)
+                .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public async Task Unsubscribe(Type eventType, ILambdaContext lambdaContext)
         {
-            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(lambdaContext)
+                .ConfigureAwait(false);
 
-            await endpoint.Unsubscribe(eventType).ConfigureAwait(false);
+            await endpoint.Unsubscribe(eventType)
+                .ConfigureAwait(false);
         }
 
-        async Task Initialize(AwsLambdaSQSEndpointConfiguration configuration)
+        async Task<ServerlessTransport> Initialize(AwsLambdaSQSEndpointConfiguration configuration)
         {
             var settingsHolder = configuration.AdvancedConfiguration.GetSettings();
-            var sqsClientFactory = settingsHolder.GetOrDefault<Func<IAmazonSQS>>(SettingsKeys.SqsClientFactory) ?? (() => new AmazonSQSClient());
 
-            sqsClient = sqsClientFactory();
-            awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
-            queueUrl = await GetQueueUrl(settingsHolder.EndpointName()).ConfigureAwait(false);
-            errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress()).ConfigureAwait(false);
+            sqsClient = configuration.Transport.SqsClient;
 
-            s3BucketForLargeMessages = settingsHolder.GetOrDefault<string>(SettingsKeys.S3BucketForLargeMessages);
-            if (string.IsNullOrWhiteSpace(s3BucketForLargeMessages))
-            {
-                return;
-            }
+            queueUrl = await GetQueueUrl(settingsHolder.EndpointName())
+                .ConfigureAwait(false);
+            errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress())
+                .ConfigureAwait(false);
 
-            var s3ClientFactory = settingsHolder.GetOrDefault<Func<IAmazonS3>>(SettingsKeys.S3ClientFactory) ?? (() => new AmazonS3Client());
-            s3Client = s3ClientFactory();
+            s3Settings = configuration.Transport.S3;
+
+            var serverlessTransport = new ServerlessTransport(configuration.Transport);
+            configuration.EndpointConfiguration.UseTransport(serverlessTransport);
+
+            return serverlessTransport;
         }
 
         async Task<string> GetQueueUrl(string queueName)
         {
-            var sanitizedErrorQueueName = QueueNameHelper.GetSanitizedQueueName(queueName);
+            var sanitizedQueueName = QueueNameHelper.GetSanitizedQueueName(queueName);
             try
             {
-                return (await sqsClient.GetQueueUrlAsync(sanitizedErrorQueueName).ConfigureAwait(false)).QueueUrl;
+                return (await sqsClient.GetQueueUrlAsync(sanitizedQueueName).ConfigureAwait(false)).QueueUrl;
             }
             catch (Exception e)
             {
-                Logger.Error($"Failed to obtain the queue URL for queue {sanitizedErrorQueueName} (derived from configured name {queueName}).", e);
+                Logger.Error($"Failed to obtain the queue URL for queue {sanitizedQueueName} (derived from configured name {queueName}).", e);
                 throw;
             }
         }
 
         async Task ProcessMessage(SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
-            byte[] messageBody = null;
+            var arrayPool = ArrayPool<byte>.Shared;
+            ReadOnlyMemory<byte> messageBody = null;
+            byte[] messageBodyBuffer = null;
             TransportMessage transportMessage = null;
             Exception exception = null;
             var nativeMessageId = receivedMessage.MessageId;
@@ -214,48 +237,101 @@
 
             try
             {
-                if (receivedMessage.MessageAttributes.TryGetValue(Headers.MessageId, out var messageIdAttribute))
+                try
                 {
-                    messageId = messageIdAttribute.StringValue;
+                    if (receivedMessage.MessageAttributes.TryGetValue(Headers.MessageId, out var messageIdAttribute))
+                    {
+                        messageId = messageIdAttribute.StringValue;
+                    }
+                    else
+                    {
+                        messageId = nativeMessageId;
+                    }
+
+                    if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.Headers, out var headersAttribute))
+                    {
+                        transportMessage = new TransportMessage
+                        {
+                            Headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersAttribute.StringValue) ?? new Dictionary<string, string>(),
+                            Body = receivedMessage.Body
+                        };
+                        transportMessage.Headers[Headers.MessageId] = messageId;
+                        if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.S3BodyKey, out var s3BodyKey))
+                        {
+                            transportMessage.Headers[TransportHeaders.S3BodyKey] = s3BodyKey.StringValue;
+                            transportMessage.S3BodyKey = s3BodyKey.StringValue;
+                        }
+                    }
+                    else
+                    {
+                        // When the MessageTypeFullName attribute is available, we're assuming native integration
+                        if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.MessageTypeFullName,
+                                out var enclosedMessageType))
+                        {
+                            var headers = new Dictionary<string, string>
+                            {
+                                { Headers.MessageId, messageId },
+                                { Headers.EnclosedMessageTypes, enclosedMessageType.StringValue },
+                                {
+                                    TransportHeaders.MessageTypeFullName, enclosedMessageType.StringValue
+                                } // we're copying over the value of the native message attribute into the headers, converting this into a nsb message
+                            };
+
+                            if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.S3BodyKey,
+                                    out var s3BodyKey))
+                            {
+                                headers.Add(TransportHeaders.S3BodyKey, s3BodyKey.StringValue);
+                            }
+
+                            transportMessage = new TransportMessage
+                            {
+                                Headers = headers,
+                                S3BodyKey = s3BodyKey?.StringValue,
+                                Body = receivedMessage.Body
+                            };
+                        }
+                        else
+                        {
+                            transportMessage = JsonSerializer.Deserialize<TransportMessage>(receivedMessage.Body,
+                                transportMessageSerializerOptions);
+                        }
+                    }
+
+                    (messageBody, messageBodyBuffer) = await transportMessage.RetrieveBody(messageId, s3Settings, arrayPool, token).ConfigureAwait(false);
                 }
-                else
+                catch (Exception ex) when (!ex.IsCausedBy(token))
                 {
-                    messageId = nativeMessageId;
+                    // Can't deserialize. This is a poison message
+                    exception = ex;
+                    isPoisonMessage = true;
                 }
 
-                transportMessage = SimpleJson.DeserializeObject<TransportMessage>(receivedMessage.Body);
+                if (isPoisonMessage || transportMessage == null)
+                {
+                    LogPoisonMessage(messageId, exception);
 
-                messageBody = await transportMessage.RetrieveBody(s3Client, s3BucketForLargeMessages, token).ConfigureAwait(false);
+                    await MovePoisonMessageToErrorQueue(receivedMessage, messageId).ConfigureAwait(false);
+                    return;
+                }
+
+                if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, sqsClient.Config.ClockOffset))
+                {
+                    // here we also want to use the native message id because the core demands it like that
+                    await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, lambdaContext, token).ConfigureAwait(false);
+                }
+
+                // Always delete the message from the queue.
+                // If processing failed, the onError handler will have moved the message
+                // to a retry queue.
+                await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey).ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            finally
             {
-                return;
+                if (messageBodyBuffer != null)
+                {
+                    arrayPool.Return(messageBodyBuffer, clearArray: true);
+                }
             }
-            catch (Exception ex)
-            {
-                // Can't deserialize. This is a poison message
-                exception = ex;
-                isPoisonMessage = true;
-            }
-
-            if (isPoisonMessage || messageBody == null || transportMessage == null)
-            {
-                LogPoisonMessage(messageId, exception);
-
-                await MovePoisonMessageToErrorQueue(receivedMessage, messageId).ConfigureAwait(false);
-                return;
-            }
-
-            if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, CorrectClockSkew.GetClockCorrectionForEndpoint(awsEndpointUrl)))
-            {
-                // here we also want to use the native message id because the core demands it like that
-                await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, lambdaContext, token).ConfigureAwait(false);
-            }
-
-            // Always delete the message from the queue.
-            // If processing failed, the onError handler will have moved the message
-            // to a retry queue.
-            await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey).ConfigureAwait(false);
         }
 
         static bool IsMessageExpired(SQSEvent.SQSMessage receivedMessage, Dictionary<string, string> headers, string messageId, TimeSpan clockOffset)
@@ -272,7 +348,7 @@
                 return false;
             }
 
-            var sentDateTime = receivedMessage.GetAdjustedDateTimeFromServerSetAttributes(clockOffset);
+            var sentDateTime = receivedMessage.GetAdjustedDateTimeFromServerSetAttributes("SentTimestamp", clockOffset);
             var expiresAt = sentDateTime + timeToBeReceived;
             var utcNow = DateTime.UtcNow;
             if (expiresAt > utcNow)
@@ -285,30 +361,28 @@
             return true;
         }
 
-        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, byte[] body, ILambdaContext lambdaContext, CancellationToken token)
+        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, ReadOnlyMemory<byte> body, ILambdaContext lambdaContext, CancellationToken token)
         {
             var immediateProcessingAttempts = 0;
-            var messageProcessedOk = false;
             var errorHandled = false;
 
-            while (!errorHandled && !messageProcessedOk)
+            while (!errorHandled)
             {
                 try
                 {
-                    using (var messageContextCancellationTokenSource = new CancellationTokenSource())
-                    {
-                        var messageContext = new MessageContext(
-                            nativeMessageId,
-                            new Dictionary<string, string>(headers),
-                            body,
-                            transportTransaction,
-                            messageContextCancellationTokenSource,
-                            new ContextBag());
+                    token.ThrowIfCancellationRequested();
 
-                        await Process(messageContext, lambdaContext).ConfigureAwait(false);
+                    var messageContext = new MessageContext(
+                        nativeMessageId,
+                        new Dictionary<string, string>(headers),
+                        body,
+                        transportTransaction,
+                        queueUrl,
+                        new ContextBag());
 
-                        messageProcessedOk = !messageContextCancellationTokenSource.IsCancellationRequested;
-                    }
+                    await Process(messageContext, lambdaContext, token).ConfigureAwait(false);
+
+                    return;
                 }
                 catch (Exception ex)
                     when (!(ex is OperationCanceledException && token.IsCancellationRequested))
@@ -324,7 +398,9 @@
                             nativeMessageId,
                             body,
                             transportTransaction,
-                            immediateProcessingAttempts);
+                            immediateProcessingAttempts,
+                            queueUrl,
+                            new ContextBag());
 
                         errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext).ConfigureAwait(false);
                     }
@@ -339,17 +415,21 @@
             }
         }
 
-        async Task Process(MessageContext messageContext, ILambdaContext executionContext)
+        async Task Process(MessageContext messageContext, ILambdaContext executionContext, CancellationToken cancellationToken)
         {
-            await InitializeEndpointIfNecessary(executionContext, messageContext.ReceiveCancellationTokenSource.Token).ConfigureAwait(false);
-            await pipeline.PushMessage(messageContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(executionContext, cancellationToken)
+                .ConfigureAwait(false);
+            await pipeline.PushMessage(messageContext)
+                .ConfigureAwait(false);
         }
 
         async Task<ErrorHandleResult> ProcessFailedMessage(ErrorContext errorContext, ILambdaContext executionContext)
         {
-            await InitializeEndpointIfNecessary(executionContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(executionContext)
+                .ConfigureAwait(false);
 
-            return await pipeline.PushFailedMessage(errorContext).ConfigureAwait(false);
+            return await pipeline.PushFailedMessage(errorContext)
+                .ConfigureAwait(false);
         }
 
         async Task DeleteMessageAndBodyIfRequired(SQSEvent.SQSMessage message, string messageS3BodyKey)
@@ -357,7 +437,8 @@
             try
             {
                 // should not be cancelled
-                await sqsClient.DeleteMessageAsync(queueUrl, message.ReceiptHandle, CancellationToken.None).ConfigureAwait(false);
+                await sqsClient.DeleteMessageAsync(queueUrl, message.ReceiptHandle, CancellationToken.None)
+                    .ConfigureAwait(false);
             }
             catch (ReceiptHandleIsInvalidException ex)
             {
@@ -387,7 +468,8 @@
                             DataType = "String"
                         }
                     }
-                }, CancellationToken.None).ConfigureAwait(false);
+                }, CancellationToken.None)
+                    .ConfigureAwait(false);
                 // The MessageAttributes on message are read-only attributes provided by SQS
                 // and can't be re-sent. Unfortunately all the SQS metadata
                 // such as SentTimestamp is reset with this send.
@@ -402,14 +484,15 @@
                         QueueUrl = queueUrl,
                         ReceiptHandle = message.ReceiptHandle,
                         VisibilityTimeout = 0
-                    }, CancellationToken.None).ConfigureAwait(false);
+                    }, CancellationToken.None)
+                        .ConfigureAwait(false);
                 }
                 catch (Exception changeMessageVisibilityEx)
                 {
                     Logger.Warn($"Error returning poison message back to input queue at url {queueUrl}. Poison message will become available at the input queue again after the visibility timeout expires.", changeMessageVisibilityEx);
                 }
 
-                return;
+                throw;
             }
 
             try
@@ -418,7 +501,8 @@
                 {
                     QueueUrl = queueUrl,
                     ReceiptHandle = message.ReceiptHandle
-                }, CancellationToken.None).ConfigureAwait(false);
+                }, CancellationToken.None)
+                    .ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -443,17 +527,19 @@
         }
 
         readonly Func<ILambdaContext, AwsLambdaSQSEndpointConfiguration> configurationFactory;
-        readonly SemaphoreSlim semaphoreLock = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+        readonly SemaphoreSlim semaphoreLock = new(initialCount: 1, maxCount: 1);
+        readonly JsonSerializerOptions transportMessageSerializerOptions = new()
+        {
+            TypeInfoResolver = TransportMessageSerializerContext.Default
+        };
         PipelineInvoker pipeline;
         IEndpointInstance endpoint;
         IAmazonSQS sqsClient;
-        IAmazonS3 s3Client;
-        string s3BucketForLargeMessages;
-        string awsEndpointUrl;
+        S3Settings s3Settings;
         string queueUrl;
         string errorQueueUrl;
 
-        static ILog Logger = LogManager.GetLogger(typeof(AwsLambdaSQSEndpoint));
-        static readonly TransportTransaction transportTransaction = new TransportTransaction();
+        static readonly ILog Logger = LogManager.GetLogger(typeof(AwsLambdaSQSEndpoint));
+        static readonly TransportTransaction transportTransaction = new();
     }
 }

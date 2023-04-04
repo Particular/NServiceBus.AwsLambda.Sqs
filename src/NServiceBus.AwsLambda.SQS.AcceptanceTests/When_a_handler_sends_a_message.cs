@@ -1,6 +1,7 @@
-﻿namespace NServiceBus.AwsLambda.Tests
+﻿namespace NServiceBus.AcceptanceTests
 {
     using System.Threading.Tasks;
+    using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
 
     class When_a_handler_sends_a_message : AwsLambdaSQSEndpointTestBase
@@ -14,28 +15,28 @@
 
             var destinationEndpointName = $"{QueueNamePrefix}DestinationEndpoint";
             RegisterQueueNameToCleanup(destinationEndpointName);
+            RegisterQueueNameToCleanup(destinationEndpointName + DelayedDeliveryQueueSuffix);
 
             var destinationConfiguration = new EndpointConfiguration(destinationEndpointName);
-            destinationConfiguration.UsePersistence<InMemoryPersistence>();
-            var destinationTransport = destinationConfiguration.UseTransport<SqsTransport>();
-            destinationTransport.ClientFactory(CreateSQSClient);
+
+            var destinationTransport = new SqsTransport(CreateSQSClient(), CreateSNSClient());
+
             destinationConfiguration.SendFailedMessagesTo(ErrorQueueName);
             destinationConfiguration.EnableInstallers();
-            destinationConfiguration.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
+            destinationConfiguration.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
+            destinationConfiguration.UseTransport(destinationTransport);
+
             var destinationEndpoint = await Endpoint.Start(destinationConfiguration);
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName);
-                var transport = configuration.Transport;
-                transport.ClientFactory(CreateSQSClient);
+                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
 
-                var routing = transport.Routing();
-                routing.RouteToEndpoint(typeof(SentMessage), destinationEndpointName);
+                configuration.RoutingSettings.RouteToEndpoint(typeof(SentMessage), destinationEndpointName);
 
                 var advanced = configuration.AdvancedConfiguration;
                 advanced.SendFailedMessagesTo(ErrorQueueName);
-                advanced.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
+                advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
                 return configuration;
             });
 

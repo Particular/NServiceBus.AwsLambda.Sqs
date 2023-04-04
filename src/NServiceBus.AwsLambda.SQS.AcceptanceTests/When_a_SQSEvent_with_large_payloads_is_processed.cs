@@ -1,7 +1,8 @@
-﻿namespace NServiceBus.AwsLambda.Tests
+﻿namespace NServiceBus.AcceptanceTests
 {
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
 
     class When_a_SQSEvent_with_large_payloads_is_processed : AwsLambdaSQSEndpointTestBase
@@ -15,16 +16,14 @@
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName);
+                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
                 var transport = configuration.Transport;
-                transport.ClientFactory(CreateSQSClient);
 
-                var s3 = transport.S3(BucketName, KeyPrefix);
-                s3.ClientFactory(CreateS3Client);
+                transport.S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client());
 
                 var advanced = configuration.AdvancedConfiguration;
                 advanced.SendFailedMessagesTo(ErrorQueueName);
-                advanced.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
+                advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
                 return configuration;
             });
 

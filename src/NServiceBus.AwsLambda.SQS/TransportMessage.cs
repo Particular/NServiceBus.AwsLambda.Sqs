@@ -2,19 +2,19 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
-    using DeliveryConstraints;
-    using Performance.TimeToBeReceived;
     using Transport;
 
     class TransportMessage
     {
+        //MessageBody of Amazon.SQS SendRequest must have a minimum length of 1: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_SendMessage.html
+        public const string EmptyMessage = "empty message";
+
         // Empty constructor required for deserialization.
         public TransportMessage()
         {
         }
 
-        public TransportMessage(OutgoingMessage outgoingMessage, List<DeliveryConstraint> deliveryConstraints)
+        public TransportMessage(OutgoingMessage outgoingMessage, DispatchProperties properties)
         {
             Headers = outgoingMessage.Headers;
 
@@ -25,13 +25,23 @@
                 Headers[NServiceBus.Headers.MessageId] = messageId;
             }
 
-            var discardConstraint = deliveryConstraints.OfType<DiscardIfNotReceivedBefore>().SingleOrDefault();
-            if (discardConstraint != null)
+            if (properties.DiscardIfNotReceivedBefore != null)
             {
-                TimeToBeReceived = discardConstraint.MaxTime.ToString();
+                TimeToBeReceived = properties.DiscardIfNotReceivedBefore.MaxTime.ToString();
             }
 
-            Body = outgoingMessage.Body != null ? Convert.ToBase64String(outgoingMessage.Body) : "empty message";
+            if (outgoingMessage.Body.Length != 0)
+            {
+#if NETFRAMEWORK
+                Body = Convert.ToBase64String(outgoingMessage.Body.ToArray());
+#else
+                Body = Convert.ToBase64String(outgoingMessage.Body.Span);
+#endif
+            }
+            else
+            {
+                Body = EmptyMessage;
+            }
         }
 
         public Dictionary<string, string> Headers { get; set; }
@@ -54,7 +64,7 @@
 
         public Address? ReplyToAddress
         {
-            get => Headers.ContainsKey(NServiceBus.Headers.ReplyToAddress) ? new Address { Queue = Headers[NServiceBus.Headers.ReplyToAddress] } : (Address?)null;
+            get => Headers.ContainsKey(NServiceBus.Headers.ReplyToAddress) ? new Address { Queue = Headers[NServiceBus.Headers.ReplyToAddress] } : null;
             set
             {
                 if (!string.IsNullOrWhiteSpace(value?.Queue))
