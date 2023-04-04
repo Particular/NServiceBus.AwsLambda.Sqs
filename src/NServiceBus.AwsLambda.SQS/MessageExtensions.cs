@@ -29,11 +29,9 @@
                 transportMessage.S3BodyKey,
                 cancellationToken).ConfigureAwait(false);
 
-            using (var memoryStream = new MemoryStream())
-            {
-                await s3GetResponse.ResponseStream.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
-                return memoryStream.ToArray();
-            }
+            using var memoryStream = new MemoryStream();
+            await s3GetResponse.ResponseStream.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
+            return memoryStream.ToArray();
         }
 
         public static DateTime GetAdjustedDateTimeFromServerSetAttributes(this SQSEvent.SQSMessage message, TimeSpan clockOffset)
@@ -44,6 +42,6 @@
             return result + clockOffset;
         }
 
-        static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     }
 }

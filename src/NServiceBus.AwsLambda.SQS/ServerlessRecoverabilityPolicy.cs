@@ -11,18 +11,18 @@
         {
             var action = DefaultRecoverabilityPolicy.Invoke(config, errorContext);
 
-            if (action is MoveToError)
+            if (action is not MoveToError)
             {
-                if (SendFailedMessagesToErrorQueue)
-                {
-                    return action;
-                }
-
-                // 7.2 offers a Discard option, but we want to bubble up the exception so it can fail the function invocation.
-                throw new Exception("Failed to process message.", errorContext.Exception);
+                return action;
             }
 
-            return action;
+            if (SendFailedMessagesToErrorQueue)
+            {
+                return action;
+            }
+
+            // 7.2 offers a Discard option, but we want to bubble up the exception so it can fail the function invocation.
+            throw new Exception("Failed to process message.", errorContext.Exception);
         }
     }
 }

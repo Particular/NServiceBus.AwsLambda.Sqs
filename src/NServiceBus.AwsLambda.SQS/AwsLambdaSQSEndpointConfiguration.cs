@@ -92,16 +92,12 @@
         /// Define the serializer to be used.
         /// </summary>
         public SerializationExtensions<T> UseSerialization<T>() where T : SerializationDefinition, new()
-        {
-            return EndpointConfiguration.UseSerialization<T>();
-        }
+            => EndpointConfiguration.UseSerialization<T>();
 
         /// <summary>
         /// Disables moving messages to the error queue even if an error queue name is configured.
         /// </summary>
         public void DoNotSendMessagesToErrorQueue()
-        {
-            recoverabilityPolicy.SendFailedMessagesToErrorQueue = false;
-        }
+            => recoverabilityPolicy.SendFailedMessagesToErrorQueue = false;
     }
 }

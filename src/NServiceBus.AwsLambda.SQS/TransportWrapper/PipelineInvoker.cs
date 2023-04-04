@@ -4,15 +4,11 @@
     using System.Threading.Tasks;
     using Transport;
 
-    class PipelineInvoker : IMessageReceiver
+    sealed class PipelineInvoker : IMessageReceiver
     {
-        public PipelineInvoker(IMessageReceiver baseTransportReceiver)
-        {
-            this.baseTransportReceiver = baseTransportReceiver;
-        }
+        public PipelineInvoker(IMessageReceiver baseTransportReceiver) => this.baseTransportReceiver = baseTransportReceiver;
 
         public ISubscriptionManager Subscriptions => baseTransportReceiver.Subscriptions;
-
 
         public string Id => baseTransportReceiver.Id;
 
@@ -30,30 +26,15 @@
                 cancellationToken) ?? Task.CompletedTask;
         }
 
-        Task IMessageReceiver.StartReceive(CancellationToken cancellationToken)
-        {
-            return Task.CompletedTask;
-        }
+        Task IMessageReceiver.StartReceive(CancellationToken cancellationToken) => Task.CompletedTask;
 
-        Task IMessageReceiver.StopReceive(CancellationToken cancellationToken)
-        {
-            return Task.CompletedTask;
-        }
+        Task IMessageReceiver.StopReceive(CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task<ErrorHandleResult> PushFailedMessage(ErrorContext errorContext)
-        {
-            return onError(errorContext);
-        }
+        public Task<ErrorHandleResult> PushFailedMessage(ErrorContext errorContext) => onError(errorContext);
 
-        Task IMessageReceiver.ChangeConcurrency(PushRuntimeSettings limitations, CancellationToken cancellationToken)
-        {
-            return Task.CompletedTask;
-        }
+        Task IMessageReceiver.ChangeConcurrency(PushRuntimeSettings limitations, CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task PushMessage(MessageContext messageContext)
-        {
-            return onMessage.Invoke(messageContext);
-        }
+        public Task PushMessage(MessageContext messageContext) => onMessage.Invoke(messageContext);
 
         OnMessage onMessage;
         OnError onError;

@@ -5,7 +5,7 @@
     using System.Threading.Tasks;
     using Transport;
 
-    class ServerlessTransportInfrastructure : TransportInfrastructure
+    sealed class ServerlessTransportInfrastructure : TransportInfrastructure
     {
         public ServerlessTransportInfrastructure(TransportInfrastructure baseTransportInfrastructure)
         {

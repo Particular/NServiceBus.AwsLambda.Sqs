@@ -4,16 +4,10 @@
 
     class LambdaLoggerDefinition : LoggingFactoryDefinition
     {
+        public void Level(LogLevel level) => this.level = level;
+
+        protected override ILoggerFactory GetLoggingFactory() => new LambdaLoggerFactory(level);
+
         LogLevel level = LogLevel.Info;
-
-        public void Level(LogLevel level)
-        {
-            this.level = level;
-        }
-
-        protected override ILoggerFactory GetLoggingFactory()
-        {
-            return new LambdaLoggerFactory(level);
-        }
     }
 }

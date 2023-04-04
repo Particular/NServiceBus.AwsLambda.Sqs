@@ -6,16 +6,14 @@
     using NServiceBus;
     using Transport;
 
-    class ServerlessTransport : TransportDefinition
+    sealed class ServerlessTransport : TransportDefinition
     {
         // HINT: This constant is defined in NServiceBus but is not exposed
         const string MainReceiverId = "Main";
 
         public ServerlessTransport(TransportDefinition baseTransport)
-            : base(baseTransport.TransportTransactionMode, baseTransport.SupportsDelayedDelivery, baseTransport.SupportsPublishSubscribe, baseTransport.SupportsTTBR)
-        {
+            : base(baseTransport.TransportTransactionMode, baseTransport.SupportsDelayedDelivery, baseTransport.SupportsPublishSubscribe, baseTransport.SupportsTTBR) =>
             BaseTransport = baseTransport;
-        }
 
         public TransportDefinition BaseTransport { get; }
 
@@ -23,8 +21,9 @@
 
         public override async Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
         {
-            //   hostSettings.
-            var baseTransportInfrastructure = await BaseTransport.Initialize(hostSettings, receivers, sendingAddresses, cancellationToken).ConfigureAwait(false);
+            var baseTransportInfrastructure = await BaseTransport.Initialize(hostSettings, receivers, sendingAddresses, cancellationToken)
+                .ConfigureAwait(false);
+
             var serverlessTransportInfrastructure = new ServerlessTransportInfrastructure(baseTransportInfrastructure);
             PipelineInvoker = (PipelineInvoker)serverlessTransportInfrastructure.Receivers[MainReceiverId];
 
@@ -33,11 +32,11 @@
         }
 
 #pragma warning disable CS0672 // Member overrides obsolete member
-#pragma warning disable CS0618 // Type or memeber is obsolete
+#pragma warning disable CS0618 // Type or member is obsolete
 
         public override string ToTransportAddress(QueueAddress address) => BaseTransport.ToTransportAddress(address);
 
-#pragma warning restore CS0618 // Type or memeber is obsolete
+#pragma warning restore CS0618 // Type or member is obsolete
 #pragma warning restore CS0672 // Member overrides obsolete member
 
 
