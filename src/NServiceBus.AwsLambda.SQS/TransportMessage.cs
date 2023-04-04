@@ -6,6 +6,9 @@
 
     class TransportMessage
     {
+        //MessageBody of Amazon.SQS SendRequest must have a minimum length of 1: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_SendMessage.html
+        public const string EmptyMessage = "empty message";
+
         // Empty constructor required for deserialization.
         public TransportMessage()
         {
@@ -27,7 +30,18 @@
                 TimeToBeReceived = properties.DiscardIfNotReceivedBefore.MaxTime.ToString();
             }
 
-            Body = !outgoingMessage.Body.IsEmpty ? Convert.ToBase64String(outgoingMessage.Body.Span) : "empty message";
+            if (outgoingMessage.Body.Length != 0)
+            {
+#if NETFRAMEWORK
+                Body = Convert.ToBase64String(outgoingMessage.Body.ToArray());
+#else
+                Body = Convert.ToBase64String(outgoingMessage.Body.Span);
+#endif
+            }
+            else
+            {
+                Body = EmptyMessage;
+            }
         }
 
         public Dictionary<string, string> Headers { get; set; }

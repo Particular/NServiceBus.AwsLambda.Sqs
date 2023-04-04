@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
     using Amazon.Lambda.Core;
@@ -14,7 +15,6 @@
     using Configuration.AdvancedExtensibility;
     using Extensibility;
     using Logging;
-    using SimpleJson;
     using Transport;
 
     /// <summary>
@@ -249,7 +249,7 @@
                     messageId = nativeMessageId;
                 }
 
-                transportMessage = SimpleJson.DeserializeObject<TransportMessage>(receivedMessage.Body);
+                transportMessage = JsonSerializer.Deserialize<TransportMessage>(receivedMessage.Body, transportMessageSerializerOptions);
 
                 messageBody = await transportMessage.RetrieveBody(s3Client, s3BucketForLargeMessages, token).ConfigureAwait(false);
             }
@@ -474,6 +474,10 @@
 
         readonly Func<ILambdaContext, AwsLambdaSQSEndpointConfiguration> configurationFactory;
         readonly SemaphoreSlim semaphoreLock = new(initialCount: 1, maxCount: 1);
+        readonly JsonSerializerOptions transportMessageSerializerOptions = new()
+        {
+            TypeInfoResolver = TransportMessageSerializerContext.Default
+        };
         PipelineInvoker pipeline;
         IEndpointInstance endpoint;
         IAmazonSQS sqsClient;
