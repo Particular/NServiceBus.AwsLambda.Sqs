@@ -1,4 +1,4 @@
-﻿namespace NServiceBus.AwsLambda.Tests
+﻿namespace NServiceBus.AcceptanceTests
 {
     using System.Threading;
     using System.Threading.Tasks;

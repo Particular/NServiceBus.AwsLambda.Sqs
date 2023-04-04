@@ -1,4 +1,4 @@
-﻿namespace NServiceBus.AwsLambda.Tests
+﻿namespace NServiceBus.AcceptanceTests
 {
     using System.Threading;
     using System.Threading.Tasks;
@@ -19,9 +19,7 @@
                 var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
                 var transport = configuration.Transport;
 
-
                 transport.S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client());
-
 
                 var advanced = configuration.AdvancedConfiguration;
                 advanced.SendFailedMessagesTo(ErrorQueueName);

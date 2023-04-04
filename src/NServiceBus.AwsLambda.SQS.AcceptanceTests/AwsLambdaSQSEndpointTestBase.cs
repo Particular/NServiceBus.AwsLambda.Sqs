@@ -1,10 +1,11 @@
-﻿namespace NServiceBus.AwsLambda.Tests
+﻿namespace NServiceBus.AcceptanceTests
 {
     using System;
     using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
     using System.Linq;
+    using System.Text;
     using System.Threading.Tasks;
     using Amazon.Lambda.SQSEvents;
     using Amazon.Runtime;
@@ -133,12 +134,49 @@
             {
                 MaxNumberOfMessages = count,
                 WaitTimeSeconds = 20,
+                AttributeNames = new List<string> { "SentTimestamp" },
+                MessageAttributeNames = new List<string> { "*" }
             };
 
             var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);
 
             return receivedMessages.ToSQSEvent();
         }
+
+        protected async Task<SQSEvent> GenerateAndReceiveNativeSQSEvent(Dictionary<string, MessageAttributeValue> messageAttributeValues, string message, bool base64Encode = true)
+        {
+            var body = base64Encode ? Convert.ToBase64String(Encoding.UTF8.GetBytes(message)) : message;
+
+            var sendMessageRequest = new SendMessageRequest
+            {
+                QueueUrl = createdQueue.QueueUrl,
+                MessageAttributes = messageAttributeValues,
+                MessageBody = body
+            };
+
+            await sqsClient.SendMessageAsync(sendMessageRequest)
+                .ConfigureAwait(false);
+
+            var receiveRequest = new ReceiveMessageRequest(createdQueue.QueueUrl)
+            {
+                MaxNumberOfMessages = 10,
+                WaitTimeSeconds = 20,
+                AttributeNames = new List<string> { "SentTimestamp" },
+                MessageAttributeNames = new List<string> { "*" }
+            };
+
+            var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);
+
+            return receivedMessages.ToSQSEvent();
+        }
+
+        protected async Task UploadMessageBodyToS3(string key, string body) =>
+            await s3Client.PutObjectAsync(new PutObjectRequest
+            {
+                Key = $"{key}",
+                BucketName = BucketName,
+                ContentBody = body
+            });
 
         protected async Task<int> CountMessagesInErrorQueue()
         {
