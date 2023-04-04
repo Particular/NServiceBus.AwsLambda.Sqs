@@ -58,16 +58,6 @@ namespace NServiceBus.AwsLambda.SQS
             }
             else
             {
-#if NETFRAMEWORK
-                try
-                {
-                    return (Convert.FromBase64String(body), null);
-                }
-                catch (FormatException)
-                {
-                    return GetNonEncodedBody(body, arrayPool, null, encoding);
-                }
-#else
                 var buffer = GetBuffer(body, arrayPool, encoding);
                 if (Convert.TryFromBase64String(body, buffer, out var writtenBytes))
                 {
@@ -75,7 +65,6 @@ namespace NServiceBus.AwsLambda.SQS
                 }
 
                 return GetNonEncodedBody(body, arrayPool, buffer, encoding);
-#endif
             }
         }
 
