@@ -318,7 +318,7 @@
                 if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, sqsClient.Config.ClockOffset))
                 {
                     // here we also want to use the native message id because the core demands it like that
-                    await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, lambdaContext, token).ConfigureAwait(false);
+                    await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, receivedMessage, lambdaContext, token).ConfigureAwait(false);
                 }
 
                 // Always delete the message from the queue.
@@ -362,13 +362,17 @@
             return true;
         }
 
-        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, ReadOnlyMemory<byte> body, ILambdaContext lambdaContext, CancellationToken token)
+        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, ReadOnlyMemory<byte> body, Message nativeMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
             var immediateProcessingAttempts = 0;
             var errorHandled = false;
 
             while (!errorHandled)
             {
+                // set the native message on the context for advanced usage scenario's
+                var context = new ContextBag();
+                context.Set(nativeMessage);
+
                 try
                 {
                     token.ThrowIfCancellationRequested();
@@ -379,7 +383,7 @@
                         body,
                         transportTransaction,
                         queueUrl,
-                        new ContextBag());
+                        context);
 
                     await Process(messageContext, lambdaContext, token).ConfigureAwait(false);
 
