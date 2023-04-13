@@ -44,7 +44,8 @@
 
             foreach (var receivedMessage in @event.Records)
             {
-                processTasks.Add(ProcessMessage(receivedMessage, lambdaContext, cancellationToken));
+                var message = MessageTypeAdapter.ToMessage(receivedMessage);
+                processTasks.Add(ProcessMessage(message, lambdaContext, cancellationToken));
             }
 
             await Task.WhenAll(processTasks)
@@ -224,7 +225,7 @@
             }
         }
 
-        async Task ProcessMessage(SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, CancellationToken token)
+        async Task ProcessMessage(Message receivedMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
             var arrayPool = ArrayPool<byte>.Shared;
             ReadOnlyMemory<byte> messageBody = null;
@@ -334,7 +335,7 @@
             }
         }
 
-        static bool IsMessageExpired(SQSEvent.SQSMessage receivedMessage, Dictionary<string, string> headers, string messageId, TimeSpan clockOffset)
+        static bool IsMessageExpired(Message receivedMessage, Dictionary<string, string> headers, string messageId, TimeSpan clockOffset)
         {
             if (!headers.TryGetValue(TransportHeaders.TimeToBeReceived, out var rawTtbr))
             {
@@ -432,7 +433,7 @@
                 .ConfigureAwait(false);
         }
 
-        async Task DeleteMessageAndBodyIfRequired(SQSEvent.SQSMessage message, string messageS3BodyKey)
+        async Task DeleteMessageAndBodyIfRequired(Message message, string messageS3BodyKey)
         {
             try
             {
@@ -452,7 +453,7 @@
             }
         }
 
-        async Task MovePoisonMessageToErrorQueue(SQSEvent.SQSMessage message, string messageId)
+        async Task MovePoisonMessageToErrorQueue(Message message, string messageId)
         {
             try
             {
