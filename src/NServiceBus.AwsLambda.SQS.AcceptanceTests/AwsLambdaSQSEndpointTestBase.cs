@@ -186,6 +186,21 @@
             return response.ApproximateNumberOfMessages;
         }
 
+        protected async Task<SQSEvent> RetrieveMessagesInErrorQueue(int maxMessageCount = 10)
+        {
+            var receiveRequest = new ReceiveMessageRequest(createdErrorQueue.QueueUrl)
+            {
+                MaxNumberOfMessages = maxMessageCount,
+                WaitTimeSeconds = 20,
+                AttributeNames = new List<string> { "SentTimestamp" },
+                MessageAttributeNames = new List<string> { "*" }
+            };
+
+            var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);
+
+            return receivedMessages.ToSQSEvent();
+        }
+
         public static IAmazonSQS CreateSQSClient()
         {
             var credentials = new EnvironmentVariablesAWSCredentials();

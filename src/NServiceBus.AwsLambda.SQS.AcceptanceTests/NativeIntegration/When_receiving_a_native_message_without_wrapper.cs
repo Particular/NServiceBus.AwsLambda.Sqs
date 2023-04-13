@@ -13,6 +13,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
     class When_receiving_a_native_message_without_wrapper : AwsLambdaSQSEndpointTestBase
     {
         static readonly string MessageToSend = new XDocument(new XElement("NServiceBus.AcceptanceTests.NativeIntegration.NativeMessage", new XElement("ThisIsTheMessage", "Hello!"))).ToString();
+        static readonly string FailingMessageToSend = new XDocument(new XElement("NServiceBus.AcceptanceTests.NativeIntegration.FailingNativeMessage", new XElement("ThisIsTheMessage", "Hello!"))).ToString();
 
         [Test]
         public async Task Should_be_processed_when_nsbheaders_present_with_messageid()
@@ -132,6 +133,95 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
             Assert.AreEqual(0, messagesInErrorQueueCount);
         }
 
+        [Test]
+        public async Task Should_preserve_poison_message_attributes_in_error_queue()
+        {
+            var s3Key = Guid.NewGuid().ToString();
+
+            var receivedMessages = await GenerateAndReceiveNativeSQSEvent(new Dictionary<string, MessageAttributeValue>
+            {
+                {
+                    "NServiceBus.AmazonSQS.Headers",
+                    new MessageAttributeValue
+                    {
+                        DataType = "String", StringValue = GetHeaders(messageId: Guid.NewGuid().ToString())
+                    }
+                },
+                {"S3BodyKey", new MessageAttributeValue {DataType = "String", StringValue = s3Key}},
+                {"CustomAttribute", new MessageAttributeValue {DataType="String", StringValue = "TestAttribute" } },
+            }, "Bad XML", base64Encode: false);
+
+            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
+            {
+                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
+                var transport = configuration.Transport;
+
+                transport.S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client());
+
+                var advanced = configuration.AdvancedConfiguration;
+                advanced.SendFailedMessagesTo(ErrorQueueName);
+                return configuration;
+            });
+
+            await endpoint.Process(receivedMessages, null);
+
+            var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
+
+            Assert.AreEqual(1, messagesInErrorQueueCount);
+
+            var errorMessages = await RetrieveMessagesInErrorQueue();
+
+            var message = errorMessages?.Records[0];
+
+            Assert.NotNull(message);
+            Assert.That(message.MessageAttributes.ContainsKey("NServiceBus.AmazonSQS.Headers"), $"NServiceBus.AmazonSQS.Headers message attribute is missing.");
+            Assert.That(message.MessageAttributes.ContainsKey("S3BodyKey"), "S3BodyKey message attribute is missing.");
+            Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+        }
+
+        [Test]
+        public async Task Should_preserve_message_attributes_in_error_queue()
+        {
+            var s3Key = Guid.NewGuid().ToString();
+
+            var receivedMessages = await GenerateAndReceiveNativeSQSEvent(new Dictionary<string, MessageAttributeValue>
+            {
+                {
+                    "NServiceBus.AmazonSQS.Headers",
+                    new MessageAttributeValue
+                    {
+                        DataType = "String", StringValue = GetHeaders(messageId: Guid.NewGuid().ToString())
+                    }
+                },
+                {"CustomAttribute", new MessageAttributeValue {DataType="String", StringValue = "TestAttribute" } },
+            }, FailingMessageToSend, base64Encode: false);
+
+            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
+            {
+                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
+                var transport = configuration.Transport;
+
+                transport.S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client());
+
+                var advanced = configuration.AdvancedConfiguration;
+                advanced.Recoverability().Immediate(s => s.NumberOfRetries(0));
+                advanced.SendFailedMessagesTo(ErrorQueueName);
+                return configuration;
+            });
+
+            await endpoint.Process(receivedMessages, null);
+
+            var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
+
+            Assert.AreEqual(1, messagesInErrorQueueCount);
+
+            var errorMessages = await RetrieveMessagesInErrorQueue();
+
+            var message = errorMessages?.Records[0];
+
+            Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+        }
+
         string GetHeaders(string s3Key = null, string messageId = null)
         {
             var nsbHeaders = new Dictionary<string, string>();
@@ -166,9 +256,22 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             readonly TestContext testContext;
         }
+
+        public class FailingNativeHandler : IHandleMessages<FailingNativeMessage>
+        {
+            public Task Handle(FailingNativeMessage message, IMessageHandlerContext context)
+            {
+                throw new Exception();
+            }
+        }
     }
 
     public class NativeMessage : IMessage
+    {
+        public string ThisIsTheMessage { get; set; }
+    }
+
+    public class FailingNativeMessage : IMessage
     {
         public string ThisIsTheMessage { get; set; }
     }
