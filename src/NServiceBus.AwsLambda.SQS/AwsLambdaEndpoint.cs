@@ -373,6 +373,11 @@
                 var context = new ContextBag();
                 context.Set(nativeMessage);
 
+                // We add it to the transport transaction to make it available in dispatching scenario's so we copy over message attributes when moving messages to the error/audit queue
+                var transportTransaction = new TransportTransaction();
+                transportTransaction.Set(nativeMessage);
+                transportTransaction.Set("IncomingMessageId", headers[Headers.MessageId]);
+
                 try
                 {
                     token.ThrowIfCancellationRequested();
@@ -405,7 +410,7 @@
                             transportTransaction,
                             immediateProcessingAttempts,
                             queueUrl,
-                            new ContextBag());
+                            context);
 
                         errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext).ConfigureAwait(false);
                     }
@@ -545,6 +550,5 @@
         string errorQueueUrl;
 
         static readonly ILog Logger = LogManager.GetLogger(typeof(AwsLambdaSQSEndpoint));
-        static readonly TransportTransaction transportTransaction = new();
     }
 }
