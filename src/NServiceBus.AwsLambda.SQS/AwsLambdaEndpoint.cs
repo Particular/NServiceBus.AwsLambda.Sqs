@@ -45,8 +45,7 @@
 
             foreach (var receivedMessage in @event.Records)
             {
-                var message = MessageTypeAdapter.ToMessage(receivedMessage);
-                processTasks.Add(ProcessMessage(message, lambdaContext, cancellationToken));
+                processTasks.Add(ProcessMessage(receivedMessage.ToMessage(), lambdaContext, cancellationToken));
             }
 
             await Task.WhenAll(processTasks)

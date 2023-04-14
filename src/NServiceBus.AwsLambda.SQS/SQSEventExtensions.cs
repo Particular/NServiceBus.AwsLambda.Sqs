@@ -6,9 +6,9 @@
     using Amazon.Lambda.SQSEvents;
     using Amazon.SQS.Model;
 
-    static class MessageTypeAdapter
+    static class SQSEventExtensions
     {
-        public static Message ToMessage(SQSEvent.SQSMessage sqsEventRecord)
+        public static Message ToMessage(this SQSEvent.SQSMessage sqsEventRecord)
         {
             return new Message()
             {
