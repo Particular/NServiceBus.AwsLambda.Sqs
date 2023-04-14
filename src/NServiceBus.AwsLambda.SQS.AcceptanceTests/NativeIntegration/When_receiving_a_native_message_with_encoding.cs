@@ -120,6 +120,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
             var message = poisonMessages.Records[0];
 
             Assert.IsNotNull(message);
+            Assert.That(message.MessageAttributes.ContainsKey(Headers.MessageId), "Message ID message attribute is missing.");
             Assert.That(message.MessageAttributes.ContainsKey("S3BodyKey"), "S3BodyKey message attribute is missing.");
             Assert.That(message.MessageAttributes.ContainsKey("MessageTypeFullName"), "MessageTypeFullName message attribute is missing.");
             Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");

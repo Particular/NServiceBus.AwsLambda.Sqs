@@ -3,6 +3,7 @@
     using System;
     using System.Buffers;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
@@ -311,7 +312,7 @@
                 {
                     LogPoisonMessage(messageId, exception);
 
-                    await MovePoisonMessageToErrorQueue(receivedMessage, messageId).ConfigureAwait(false);
+                    await MovePoisonMessageToErrorQueue(receivedMessage, token).ConfigureAwait(false);
                     return;
                 }
 
@@ -462,23 +463,20 @@
             }
         }
 
-        async Task MovePoisonMessageToErrorQueue(Message message, string messageId)
+        async Task MovePoisonMessageToErrorQueue(Message message, CancellationToken cancellationToken)
         {
             try
             {
+                // Ok to use LINQ here since this is not really a hot path
+                var messageAttributeValues = message.MessageAttributes
+                    .ToDictionary(pair => pair.Key, messageAttribute => messageAttribute.Value);
+
                 await sqsClient.SendMessageAsync(new SendMessageRequest
                 {
                     QueueUrl = errorQueueUrl,
                     MessageBody = message.Body,
-                    MessageAttributes =
-                    {
-                        [Headers.MessageId] = new MessageAttributeValue
-                        {
-                            StringValue = messageId,
-                            DataType = "String"
-                        }
-                    }
-                }, CancellationToken.None)
+                    MessageAttributes = messageAttributeValues
+                }, cancellationToken)
                     .ConfigureAwait(false);
                 // The MessageAttributes on message are read-only attributes provided by SQS
                 // and can't be re-sent. Unfortunately all the SQS metadata

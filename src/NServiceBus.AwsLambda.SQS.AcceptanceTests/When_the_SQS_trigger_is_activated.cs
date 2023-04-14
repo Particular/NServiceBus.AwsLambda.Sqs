@@ -1,5 +1,6 @@
 ﻿namespace NServiceBus.AcceptanceTests
 {
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.DependencyInjection;
@@ -55,7 +56,7 @@
             await endpoint.Process(receivedMessages, null);
 
             Assert.IsNotNull(context.NativeMessage);
-            Assert.AreEqual(receivedMessages.Records[0].MessageId, context.NativeMessage.MessageId);
+            Assert.That(receivedMessages.Records.Any(r => r.MessageId == context.NativeMessage.MessageId));
         }
 
         public class TestContext
