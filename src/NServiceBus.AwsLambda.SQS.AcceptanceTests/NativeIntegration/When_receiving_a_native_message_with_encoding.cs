@@ -81,7 +81,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
         }
 
         [Test]
-        public async Task Should_perserve_poison_message_attributes_in_error_queue()
+        public async Task Should_preserve_poison_message_attributes_in_error_queue()
         {
             var messageId = Guid.NewGuid();
             var s3Key = Guid.NewGuid().ToString();
