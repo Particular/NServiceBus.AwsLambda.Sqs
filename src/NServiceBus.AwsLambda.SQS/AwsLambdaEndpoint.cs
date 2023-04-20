@@ -45,7 +45,7 @@
 
             foreach (var receivedMessage in @event.Records)
             {
-                processTasks.Add(ProcessMessage(receivedMessage.ToMessage(), lambdaContext, cancellationToken));
+                processTasks.Add(ProcessMessage(receivedMessage.ToMessage(), receivedMessage, lambdaContext, cancellationToken));
             }
 
             await Task.WhenAll(processTasks)
@@ -225,7 +225,7 @@
             }
         }
 
-        async Task ProcessMessage(Message receivedMessage, ILambdaContext lambdaContext, CancellationToken token)
+        async Task ProcessMessage(Message receivedMessage, SQSEvent.SQSMessage receivedLambdaMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
             var arrayPool = ArrayPool<byte>.Shared;
             ReadOnlyMemory<byte> messageBody = null;
@@ -318,7 +318,7 @@
                 if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, sqsClient.Config.ClockOffset))
                 {
                     // here we also want to use the native message id because the core demands it like that
-                    await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, receivedMessage, lambdaContext, token).ConfigureAwait(false);
+                    await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, receivedMessage, receivedLambdaMessage, lambdaContext, token).ConfigureAwait(false);
                 }
 
                 // Always delete the message from the queue.
@@ -362,7 +362,7 @@
             return true;
         }
 
-        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, ReadOnlyMemory<byte> body, Message nativeMessage, ILambdaContext lambdaContext, CancellationToken token)
+        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, ReadOnlyMemory<byte> body, Message nativeMessage, SQSEvent.SQSMessage nativeLambdaMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
             var immediateProcessingAttempts = 0;
             var errorHandled = false;
@@ -372,10 +372,12 @@
                 // set the native message on the context for advanced usage scenario's
                 var context = new ContextBag();
                 context.Set(nativeMessage);
+                context.Set(nativeLambdaMessage);
 
                 // We add it to the transport transaction to make it available in dispatching scenario's so we copy over message attributes when moving messages to the error/audit queue
                 var transportTransaction = new TransportTransaction();
                 transportTransaction.Set(nativeMessage);
+                transportTransaction.Set(nativeLambdaMessage);
                 transportTransaction.Set("IncomingMessageId", headers[Headers.MessageId]);
 
                 try

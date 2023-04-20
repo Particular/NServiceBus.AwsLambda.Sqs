@@ -3,6 +3,7 @@
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Amazon.Lambda.SQSEvents;
     using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
 
@@ -55,8 +56,10 @@
 
             await endpoint.Process(receivedMessages, null);
 
-            Assert.IsNotNull(context.NativeMessage);
+            Assert.IsNotNull(context.NativeMessage, "SQS native message not found");
+            Assert.IsNotNull(context.LambdaNativeMessage, "Lambda native message not found");
             Assert.That(receivedMessages.Records.Any(r => r.MessageId == context.NativeMessage.MessageId));
+            Assert.That(receivedMessages.Records.Any(r => r.MessageId == context.LambdaNativeMessage.MessageId));
         }
 
         public class TestContext
@@ -67,6 +70,8 @@
             int count;
 
             public Message NativeMessage { get; set; }
+
+            public SQSEvent.SQSMessage LambdaNativeMessage { get; set; }
         }
 
         public class SuccessMessage : ICommand
@@ -83,8 +88,10 @@
             public Task Handle(SuccessMessage message, IMessageHandlerContext context)
             {
                 var nativeMessage = context.Extensions.Get<Message>();
+                var lambdaNativeMessage = context.Extensions.Get<SQSEvent.SQSMessage>();
 
                 testContext.NativeMessage = nativeMessage;
+                testContext.LambdaNativeMessage = lambdaNativeMessage;
 
                 testContext.HandlerInvoked();
                 return Task.CompletedTask;
