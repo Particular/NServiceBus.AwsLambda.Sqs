@@ -45,7 +45,7 @@
 
             foreach (var receivedMessage in @event.Records)
             {
-                processTasks.Add(ProcessMessage(receivedMessage.ToMessage(), receivedMessage, lambdaContext, cancellationToken));
+                processTasks.Add(ProcessMessage(receivedMessage, lambdaContext, cancellationToken));
             }
 
             await Task.WhenAll(processTasks)
@@ -225,13 +225,14 @@
             }
         }
 
-        async Task ProcessMessage(Message receivedMessage, SQSEvent.SQSMessage receivedLambdaMessage, ILambdaContext lambdaContext, CancellationToken token)
+        async Task ProcessMessage(SQSEvent.SQSMessage receivedLambdaMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
             var arrayPool = ArrayPool<byte>.Shared;
             ReadOnlyMemory<byte> messageBody = null;
             byte[] messageBodyBuffer = null;
             TransportMessage transportMessage = null;
             Exception exception = null;
+            var receivedMessage = receivedLambdaMessage.ToMessage();
             var nativeMessageId = receivedMessage.MessageId;
             string messageId = null;
             var isPoisonMessage = false;
