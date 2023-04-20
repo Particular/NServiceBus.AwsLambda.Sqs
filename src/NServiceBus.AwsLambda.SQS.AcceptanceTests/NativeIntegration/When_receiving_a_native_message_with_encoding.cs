@@ -127,7 +127,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
         }
 
         [Test]
-        public async Task Should_perserve_message_attributes_in_error_queue()
+        public async Task Should_preserve_message_attributes_in_error_queue()
         {
             var messageId = Guid.NewGuid();
             var messageType = typeof(FailingNativeMessage).FullName;
