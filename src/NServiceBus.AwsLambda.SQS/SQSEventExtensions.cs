@@ -1,5 +1,6 @@
 ﻿namespace NServiceBus.AwsLambda.SQS
 {
+    using System;
     using System.Collections.Generic;
     using System.IO;
     using Amazon.SQS.Model;
@@ -7,51 +8,19 @@
 
     static class SQSEventExtensions
     {
-        public static Message ToMessage(this SQSMessage sqsEventRecord)
+        public static Message ToMessage(this SQSMessage source)
         {
-            var newMessage = new Message();
+            var target = new Message();
 
-            if (!string.IsNullOrEmpty(sqsEventRecord.MessageId))
-            {
-                newMessage.MessageId = sqsEventRecord.MessageId;
-            }
+            target.SetIfNotNull(source.MessageId, static (t, value) => t.MessageId = value);
+            target.SetIfNotNull(source.ReceiptHandle, static (t, value) => t.ReceiptHandle = value);
+            target.SetIfNotNull(source.Attributes, static (t, value) => t.Attributes = value);
+            target.SetIfNotNull(source.Body, static (t, value) => t.Body = value);
+            target.SetIfNotNull(source.Md5OfBody, static (t, value) => t.MD5OfBody = value);
+            target.SetIfNotNull(source.Md5OfMessageAttributes, static (t, value) => t.MD5OfMessageAttributes = value);
+            target.SetIfNotNull(source.MessageAttributes, static (t, value) => t.MessageAttributes = ToMessageAttributes(value));
 
-            if (!string.IsNullOrEmpty(sqsEventRecord.ReceiptHandle))
-            {
-                newMessage.ReceiptHandle = sqsEventRecord.ReceiptHandle;
-            }
-
-            if (sqsEventRecord.Attributes != null)
-            {
-                newMessage.Attributes = sqsEventRecord.Attributes;
-            }
-
-            if (!string.IsNullOrEmpty(sqsEventRecord.Body))
-            {
-                newMessage.Body = sqsEventRecord.Body;
-            }
-
-            if (!string.IsNullOrEmpty(sqsEventRecord.Md5OfBody))
-            {
-                newMessage.MD5OfBody = sqsEventRecord.Md5OfBody;
-            }
-
-            if (!string.IsNullOrEmpty(sqsEventRecord.Md5OfMessageAttributes))
-            {
-                newMessage.MD5OfMessageAttributes = sqsEventRecord.Md5OfMessageAttributes;
-            }
-
-            if (!string.IsNullOrEmpty(sqsEventRecord.Md5OfMessageAttributes))
-            {
-                newMessage.MD5OfMessageAttributes = sqsEventRecord.Md5OfMessageAttributes;
-            }
-
-            if (sqsEventRecord.MessageAttributes != null)
-            {
-                newMessage.MessageAttributes = ToMessageAttributes(sqsEventRecord.MessageAttributes);
-            }
-
-            return newMessage;
+            return target;
         }
 
         static Dictionary<string, MessageAttributeValue> ToMessageAttributes(Dictionary<string, MessageAttribute> messageAttributes)
@@ -66,30 +35,35 @@
             return newMessageAttributes;
         }
 
-        static MessageAttributeValue CopyMessageAttributeValue(MessageAttribute valueToCopy)
+        static MessageAttributeValue CopyMessageAttributeValue(MessageAttribute source)
         {
-            var newValue = new MessageAttributeValue();
+            var target = new MessageAttributeValue();
 
-            if (!string.IsNullOrEmpty(valueToCopy.DataType))
-            {
-                newValue.DataType = valueToCopy.DataType;
-            }
-
-            if (!string.IsNullOrEmpty(valueToCopy.StringValue))
-            {
-                newValue.StringValue = valueToCopy.StringValue;
-            }
-
-            if (valueToCopy.BinaryValue != null)
-            {
-                newValue.BinaryValue = valueToCopy.BinaryValue;
-            }
+            target.SetIfNotNull(source.DataType, static (t, value) => t.DataType = value);
+            target.SetIfNotNull(source.StringValue, static (t, value) => t.StringValue = value);
+            target.SetIfNotNull(source.BinaryValue, static (t, value) => t.BinaryValue = value);
 
             // The SQS client returns empty lists instead of null
-            newValue.StringListValues = valueToCopy.StringListValues ?? new List<string>(0);
-            newValue.BinaryListValues = valueToCopy.BinaryListValues ?? new List<MemoryStream>(0);
+            target.StringListValues = source.StringListValues ?? new List<string>(0);
+            target.BinaryListValues = source.BinaryListValues ?? new List<MemoryStream>(0);
 
-            return newValue;
+            return target;
+        }
+
+        static void SetIfNotNull<T>(this Message message, T value, Action<Message, T> doIfNotNull)
+        {
+            if (value is not null)
+            {
+                doIfNotNull(message, value);
+            }
+        }
+
+        static void SetIfNotNull<T>(this MessageAttributeValue messageAttribute, T value, Action<MessageAttributeValue, T> doIfNotNull)
+        {
+            if (value is not null)
+            {
+                doIfNotNull(messageAttribute, value);
+            }
         }
     }
 }
