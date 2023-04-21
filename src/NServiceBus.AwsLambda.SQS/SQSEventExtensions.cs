@@ -1,6 +1,5 @@
 ﻿namespace NServiceBus.AwsLambda.SQS
 {
-    using System;
     using System.Collections.Generic;
     using System.IO;
     using Amazon.SQS.Model;
@@ -12,13 +11,13 @@
         {
             var target = new Message();
 
-            target.SetIfNotNull(source.MessageId, static (t, value) => t.MessageId = value);
-            target.SetIfNotNull(source.ReceiptHandle, static (t, value) => t.ReceiptHandle = value);
-            target.SetIfNotNull(source.Attributes, static (t, value) => t.Attributes = value);
-            target.SetIfNotNull(source.Body, static (t, value) => t.Body = value);
-            target.SetIfNotNull(source.Md5OfBody, static (t, value) => t.MD5OfBody = value);
-            target.SetIfNotNull(source.Md5OfMessageAttributes, static (t, value) => t.MD5OfMessageAttributes = value);
-            target.SetIfNotNull(source.MessageAttributes, static (t, value) => t.MessageAttributes = ToMessageAttributes(value));
+            target.MessageId = source.MessageId ?? target.MessageId;
+            target.ReceiptHandle = source.ReceiptHandle ?? target.ReceiptHandle;
+            target.Attributes = source.Attributes ?? target.Attributes;
+            target.Body = source.Body ?? target.Body;
+            target.MD5OfBody = source.Md5OfBody ?? target.MD5OfBody;
+            target.MD5OfMessageAttributes = source.Md5OfMessageAttributes ?? target.MD5OfMessageAttributes;
+            target.MessageAttributes = ToMessageAttributes(source.MessageAttributes) ?? target.MessageAttributes;
 
             return target;
         }
@@ -39,31 +38,15 @@
         {
             var target = new MessageAttributeValue();
 
-            target.SetIfNotNull(source.DataType, static (t, value) => t.DataType = value);
-            target.SetIfNotNull(source.StringValue, static (t, value) => t.StringValue = value);
-            target.SetIfNotNull(source.BinaryValue, static (t, value) => t.BinaryValue = value);
+            target.DataType = source.DataType ?? target.DataType;
+            target.StringValue = source.StringValue ?? target.StringValue;
+            target.BinaryValue = source.BinaryValue ?? target.BinaryValue;
 
             // The SQS client returns empty lists instead of null
             target.StringListValues = source.StringListValues ?? new List<string>(0);
             target.BinaryListValues = source.BinaryListValues ?? new List<MemoryStream>(0);
 
             return target;
-        }
-
-        static void SetIfNotNull<T>(this Message message, T value, Action<Message, T> doIfNotNull)
-        {
-            if (value is not null)
-            {
-                doIfNotNull(message, value);
-            }
-        }
-
-        static void SetIfNotNull<T>(this MessageAttributeValue messageAttribute, T value, Action<MessageAttributeValue, T> doIfNotNull)
-        {
-            if (value is not null)
-            {
-                doIfNotNull(messageAttribute, value);
-            }
         }
     }
 }
