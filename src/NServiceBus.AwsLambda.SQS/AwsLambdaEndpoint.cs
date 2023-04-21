@@ -3,6 +3,7 @@
     using System;
     using System.Buffers;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
@@ -224,13 +225,14 @@
             }
         }
 
-        async Task ProcessMessage(SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, CancellationToken token)
+        async Task ProcessMessage(SQSEvent.SQSMessage receivedLambdaMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
             var arrayPool = ArrayPool<byte>.Shared;
             ReadOnlyMemory<byte> messageBody = null;
             byte[] messageBodyBuffer = null;
             TransportMessage transportMessage = null;
             Exception exception = null;
+            var receivedMessage = receivedLambdaMessage.ToMessage();
             var nativeMessageId = receivedMessage.MessageId;
             string messageId = null;
             var isPoisonMessage = false;
@@ -310,14 +312,14 @@
                 {
                     LogPoisonMessage(messageId, exception);
 
-                    await MovePoisonMessageToErrorQueue(receivedMessage, messageId).ConfigureAwait(false);
+                    await MovePoisonMessageToErrorQueue(receivedMessage, token).ConfigureAwait(false);
                     return;
                 }
 
                 if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, sqsClient.Config.ClockOffset))
                 {
                     // here we also want to use the native message id because the core demands it like that
-                    await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, lambdaContext, token).ConfigureAwait(false);
+                    await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, receivedMessage, receivedLambdaMessage, lambdaContext, token).ConfigureAwait(false);
                 }
 
                 // Always delete the message from the queue.
@@ -334,7 +336,7 @@
             }
         }
 
-        static bool IsMessageExpired(SQSEvent.SQSMessage receivedMessage, Dictionary<string, string> headers, string messageId, TimeSpan clockOffset)
+        static bool IsMessageExpired(Message receivedMessage, Dictionary<string, string> headers, string messageId, TimeSpan clockOffset)
         {
             if (!headers.TryGetValue(TransportHeaders.TimeToBeReceived, out var rawTtbr))
             {
@@ -361,13 +363,24 @@
             return true;
         }
 
-        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, ReadOnlyMemory<byte> body, ILambdaContext lambdaContext, CancellationToken token)
+        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, ReadOnlyMemory<byte> body, Message nativeMessage, SQSEvent.SQSMessage nativeLambdaMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
             var immediateProcessingAttempts = 0;
             var errorHandled = false;
 
             while (!errorHandled)
             {
+                // set the native message on the context for advanced usage scenarios
+                var context = new ContextBag();
+                context.Set(nativeMessage);
+                context.Set(nativeLambdaMessage);
+
+                // We add it to the transport transaction to make it available in dispatching scenarios so we copy over message attributes when moving messages to the error/audit queue
+                var transportTransaction = new TransportTransaction();
+                transportTransaction.Set(nativeMessage);
+                transportTransaction.Set(nativeLambdaMessage);
+                transportTransaction.Set("IncomingMessageId", headers[Headers.MessageId]);
+
                 try
                 {
                     token.ThrowIfCancellationRequested();
@@ -378,7 +391,7 @@
                         body,
                         transportTransaction,
                         queueUrl,
-                        new ContextBag());
+                        context);
 
                     await Process(messageContext, lambdaContext, token).ConfigureAwait(false);
 
@@ -400,7 +413,7 @@
                             transportTransaction,
                             immediateProcessingAttempts,
                             queueUrl,
-                            new ContextBag());
+                            context);
 
                         errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext).ConfigureAwait(false);
                     }
@@ -432,7 +445,7 @@
                 .ConfigureAwait(false);
         }
 
-        async Task DeleteMessageAndBodyIfRequired(SQSEvent.SQSMessage message, string messageS3BodyKey)
+        async Task DeleteMessageAndBodyIfRequired(Message message, string messageS3BodyKey)
         {
             try
             {
@@ -452,23 +465,20 @@
             }
         }
 
-        async Task MovePoisonMessageToErrorQueue(SQSEvent.SQSMessage message, string messageId)
+        async Task MovePoisonMessageToErrorQueue(Message message, CancellationToken cancellationToken)
         {
             try
             {
+                // Ok to use LINQ here since this is not really a hot path
+                var messageAttributeValues = message.MessageAttributes
+                    .ToDictionary(pair => pair.Key, messageAttribute => messageAttribute.Value);
+
                 await sqsClient.SendMessageAsync(new SendMessageRequest
                 {
                     QueueUrl = errorQueueUrl,
                     MessageBody = message.Body,
-                    MessageAttributes =
-                    {
-                        [Headers.MessageId] = new MessageAttributeValue
-                        {
-                            StringValue = messageId,
-                            DataType = "String"
-                        }
-                    }
-                }, CancellationToken.None)
+                    MessageAttributes = messageAttributeValues
+                }, cancellationToken)
                     .ConfigureAwait(false);
                 // The MessageAttributes on message are read-only attributes provided by SQS
                 // and can't be re-sent. Unfortunately all the SQS metadata
@@ -540,6 +550,5 @@
         string errorQueueUrl;
 
         static readonly ILog Logger = LogManager.GetLogger(typeof(AwsLambdaSQSEndpoint));
-        static readonly TransportTransaction transportTransaction = new();
     }
 }
