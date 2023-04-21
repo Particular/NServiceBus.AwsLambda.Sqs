@@ -370,12 +370,12 @@
 
             while (!errorHandled)
             {
-                // set the native message on the context for advanced usage scenario's
+                // set the native message on the context for advanced usage scenarios
                 var context = new ContextBag();
                 context.Set(nativeMessage);
                 context.Set(nativeLambdaMessage);
 
-                // We add it to the transport transaction to make it available in dispatching scenario's so we copy over message attributes when moving messages to the error/audit queue
+                // We add it to the transport transaction to make it available in dispatching scenarios so we copy over message attributes when moving messages to the error/audit queue
                 var transportTransaction = new TransportTransaction();
                 transportTransaction.Set(nativeMessage);
                 transportTransaction.Set(nativeLambdaMessage);
