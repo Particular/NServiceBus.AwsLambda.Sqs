@@ -24,6 +24,11 @@
 
         static Dictionary<string, MessageAttributeValue> ToMessageAttributes(Dictionary<string, MessageAttribute> messageAttributes)
         {
+            if (messageAttributes == null)
+            {
+                return null;
+            }
+
             var newMessageAttributes = new Dictionary<string, MessageAttributeValue>(messageAttributes.Count);
 
             foreach (var attribute in messageAttributes)
