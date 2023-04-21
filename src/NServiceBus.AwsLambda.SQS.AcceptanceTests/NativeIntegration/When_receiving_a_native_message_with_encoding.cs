@@ -111,12 +111,9 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
             });
 
             await endpoint.Process(receivedMessages, null);
-
-            var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
-
-            Assert.AreEqual(1, messagesInErrorQueueCount);
-
             var poisonMessages = await RetrieveMessagesInErrorQueue();
+
+            Assert.AreEqual(1, poisonMessages.Records.Count);
             var message = poisonMessages.Records[0];
 
             Assert.IsNotNull(message);
@@ -154,14 +151,10 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
             });
 
             await endpoint.Process(receivedMessages, null);
-
-            var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
-
-            Assert.AreEqual(1, messagesInErrorQueueCount);
-
             var poisonMessages = await RetrieveMessagesInErrorQueue();
             var message = poisonMessages.Records[0];
 
+            Assert.AreEqual(1, poisonMessages.Records.Count);
             Assert.IsNotNull(message);
 
             var messageNode = JsonNode.Parse(message.Body);
