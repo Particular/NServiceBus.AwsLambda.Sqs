@@ -9,6 +9,8 @@
 
     class TransportMessage
     {
+        public const string EmptyMessage = "empty message";
+
         // Empty constructor required for deserialization.
         public TransportMessage()
         {

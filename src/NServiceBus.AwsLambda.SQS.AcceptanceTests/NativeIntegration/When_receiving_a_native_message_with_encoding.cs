@@ -1,0 +1,238 @@
+﻿namespace NServiceBus.AwsLambda.Tests.NativeIntegration
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
+    using System.Xml.Linq;
+    using Amazon.SQS.Model;
+    using Newtonsoft.Json.Linq;
+    using NUnit.Framework;
+
+    class When_receiving_a_native_message_with_encoding : AwsLambdaSQSEndpointTestBase
+    {
+        static readonly string MessageToSend = new XDocument(new XElement("Message", new XElement("ThisIsTheMessage", "Hello!"))).ToString();
+        static readonly string FailingMessageToSend = new XDocument(new XElement("FailingMessage", new XElement("ThisIsTheMessage", "Hello!"))).ToString();
+
+        [Test]
+        public async Task Should_be_processed_when_messagetypefullname_present()
+        {
+            var receivedMessages = await GenerateAndReceiveNativeSQSEvent(new Dictionary<string, MessageAttributeValue>
+            {
+                {"MessageTypeFullName", new MessageAttributeValue {DataType = "String", StringValue = typeof(Message).FullName}}
+            }, MessageToSend);
+
+            var context = new TestContext();
+
+            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
+            {
+                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName);
+                var transport = configuration.Transport;
+
+                transport.S3(BucketName, KeyPrefix);
+
+                var advanced = configuration.AdvancedConfiguration;
+                advanced.SendFailedMessagesTo(ErrorQueueName);
+                advanced.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
+                return configuration;
+            });
+
+            await endpoint.Process(receivedMessages, null);
+
+            Assert.AreEqual("Hello!", context.MessageReceived);
+
+            var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
+
+            Assert.AreEqual(0, messagesInErrorQueueCount);
+        }
+
+        [Test]
+        public async Task Should_fail_when_messagetypefullname_not_present()
+        {
+            var messageId = Guid.NewGuid();
+            var receivedMessages = await GenerateAndReceiveNativeSQSEvent(new Dictionary<string, MessageAttributeValue>
+            {
+                {
+                    Headers.MessageId, new MessageAttributeValue {DataType = "String", StringValue = messageId.ToString() }
+                }
+            }, MessageToSend);
+
+            var context = new TestContext();
+
+            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
+            {
+                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName);
+                var transport = configuration.Transport;
+
+                transport.S3(BucketName, KeyPrefix);
+
+                var advanced = configuration.AdvancedConfiguration;
+                advanced.SendFailedMessagesTo(ErrorQueueName);
+                advanced.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
+                return configuration;
+            });
+
+            await endpoint.Process(receivedMessages, null);
+
+            var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
+
+            Assert.AreEqual(1, messagesInErrorQueueCount);
+        }
+
+        [Test]
+        public async Task Should_preserve_poison_message_attributes_in_error_queue()
+        {
+            var messageId = Guid.NewGuid();
+            var s3Key = Guid.NewGuid().ToString();
+
+            var receivedMessages = await GenerateAndReceiveNativeSQSEvent(new Dictionary<string, MessageAttributeValue>
+            {
+                { Headers.MessageId, new MessageAttributeValue {DataType = "String", StringValue = messageId.ToString() }},
+                {"S3BodyKey", new MessageAttributeValue {DataType = "String", StringValue = s3Key}},
+                {"MessageTypeFullName", new MessageAttributeValue {DataType = "String", StringValue = typeof(Message).FullName}},
+                {"CustomAttribute", new MessageAttributeValue {DataType="String", StringValue = "TestAttribute" } },
+
+            }, "Invalid XML");
+
+            var context = new TestContext();
+
+            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
+            {
+                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName);
+                var transport = configuration.Transport;
+
+                transport.S3(BucketName, KeyPrefix);
+
+                var advanced = configuration.AdvancedConfiguration;
+                advanced.SendFailedMessagesTo(ErrorQueueName);
+                advanced.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
+                return configuration;
+            });
+
+            await endpoint.Process(receivedMessages, null);
+            var poisonMessages = await RetrieveMessagesInErrorQueue();
+
+            Assert.AreEqual(1, poisonMessages.Records.Count);
+            var message = poisonMessages.Records[0];
+
+            Assert.IsNotNull(message);
+            Assert.That(message.MessageAttributes.ContainsKey(Headers.MessageId), "Message ID message attribute is missing.");
+            Assert.That(message.MessageAttributes.ContainsKey("S3BodyKey"), "S3BodyKey message attribute is missing.");
+            Assert.That(message.MessageAttributes.ContainsKey("MessageTypeFullName"), "MessageTypeFullName message attribute is missing.");
+            Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+        }
+
+        [Test]
+        public async Task Should_preserve_message_attributes_in_error_queue()
+        {
+            var messageId = Guid.NewGuid();
+            var messageType = typeof(FailingNativeMessage).FullName;
+
+            var receivedMessages = await GenerateAndReceiveNativeSQSEvent(new Dictionary<string, MessageAttributeValue>
+            {
+                { Headers.MessageId, new MessageAttributeValue {DataType = "String", StringValue = messageId.ToString() }},
+                {"MessageTypeFullName", new MessageAttributeValue {DataType = "String", StringValue = messageType }},
+                {"CustomAttribute", new MessageAttributeValue {DataType="String", StringValue = "TestAttribute" } },
+
+            }, FailingMessageToSend);
+
+            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
+            {
+                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName);
+                var transport = configuration.Transport;
+
+                transport.S3(BucketName, KeyPrefix);
+
+                var advanced = configuration.AdvancedConfiguration;
+                advanced.SendFailedMessagesTo(ErrorQueueName);
+                advanced.Recoverability().Immediate(s => s.NumberOfRetries(0));
+                return configuration;
+            });
+
+            await endpoint.Process(receivedMessages, null);
+            var poisonMessages = await RetrieveMessagesInErrorQueue();
+            var message = poisonMessages.Records[0];
+
+            Assert.AreEqual(1, poisonMessages.Records.Count);
+            Assert.IsNotNull(message);
+
+            var messageNode = JObject.Parse(message.Body);
+
+            Assert.AreEqual(messageId.ToString(), (string)messageNode["Headers"]["NServiceBus.MessageId"]);
+            Assert.AreEqual(messageType, (string)messageNode["Headers"]["NServiceBus.EnclosedMessageTypes"]);
+            Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+        }
+
+        [Test]
+        public async Task Should_support_loading_body_from_s3()
+        {
+            var s3Key = Guid.NewGuid().ToString();
+
+            await UploadMessageBodyToS3(s3Key, MessageToSend);
+
+            var receivedMessages = await GenerateAndReceiveNativeSQSEvent(new Dictionary<string, MessageAttributeValue>
+            {
+                {"MessageTypeFullName", new MessageAttributeValue {DataType = "String", StringValue = typeof(Message).FullName}},
+                {"S3BodyKey", new MessageAttributeValue {DataType = "String", StringValue = s3Key}},
+            }, MessageToSend);
+
+            var context = new TestContext();
+
+            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
+            {
+                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName);
+                var transport = configuration.Transport;
+
+                transport.S3(BucketName, KeyPrefix);
+
+                var advanced = configuration.AdvancedConfiguration;
+                advanced.SendFailedMessagesTo(ErrorQueueName);
+                advanced.RegisterComponents(c => c.RegisterSingleton(typeof(TestContext), context));
+                return configuration;
+            });
+
+            await endpoint.Process(receivedMessages, null);
+
+            Assert.AreEqual("Hello!", context.MessageReceived);
+
+            var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
+
+            Assert.AreEqual(0, messagesInErrorQueueCount);
+        }
+
+        public class TestContext
+        {
+            public string MessageReceived { get; set; }
+        }
+
+        public class Message : IMessage
+        {
+            public string ThisIsTheMessage { get; set; }
+        }
+
+        public class FailingMessage : IMessage
+        {
+            public string ThisIsTheMessage { get; set; }
+        }
+
+        public class WithEncodingHandler : IHandleMessages<Message>
+        {
+            public WithEncodingHandler(TestContext context) => testContext = context;
+
+            public Task Handle(Message message, IMessageHandlerContext context)
+            {
+                testContext.MessageReceived = message.ThisIsTheMessage;
+                return Task.CompletedTask;
+            }
+
+            TestContext testContext;
+        }
+
+        public class FailingWithEncodingHandler : IHandleMessages<FailingMessage>
+        {
+            public Task Handle(FailingMessage message, IMessageHandlerContext context)
+            {
+                throw new Exception();
+            }
+        }
+    }
+}
