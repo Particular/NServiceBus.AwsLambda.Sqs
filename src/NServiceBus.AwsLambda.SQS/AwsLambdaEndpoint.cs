@@ -2,11 +2,11 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Amazon.Lambda.Core;
     using Amazon.Lambda.SQSEvents;
-    using Amazon.Runtime;
     using Amazon.S3;
     using Amazon.SQS;
     using Amazon.SQS.Model;
@@ -175,7 +175,6 @@
             var sqsClientFactory = settingsHolder.GetOrDefault<Func<IAmazonSQS>>(SettingsKeys.SqsClientFactory) ?? (() => new AmazonSQSClient());
 
             sqsClient = sqsClientFactory();
-            awsEndpointUrl = sqsClient.Config.DetermineServiceURL();
             queueUrl = await GetQueueUrl(settingsHolder.EndpointName()).ConfigureAwait(false);
             errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress()).ConfigureAwait(false);
 
@@ -203,11 +202,12 @@
             }
         }
 
-        async Task ProcessMessage(SQSEvent.SQSMessage receivedMessage, ILambdaContext lambdaContext, CancellationToken token)
+        async Task ProcessMessage(SQSEvent.SQSMessage receivedLambdaMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
             byte[] messageBody = null;
             TransportMessage transportMessage = null;
             Exception exception = null;
+            var receivedMessage = receivedLambdaMessage.ToMessage();
             var nativeMessageId = receivedMessage.MessageId;
             string messageId = null;
             var isPoisonMessage = false;
@@ -223,33 +223,75 @@
                     messageId = nativeMessageId;
                 }
 
-                transportMessage = SimpleJson.DeserializeObject<TransportMessage>(receivedMessage.Body);
+                if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.Headers, out var headersAttribute))
+                {
+                    transportMessage = new TransportMessage
+                    {
+                        Headers = SimpleJson.DeserializeObject<Dictionary<string, string>>(headersAttribute.StringValue),
+                        Body = receivedMessage.Body
+                    };
+                    transportMessage.Headers[Headers.MessageId] = messageId;
+                    if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.S3BodyKey, out var s3BodyKey))
+                    {
+                        transportMessage.Headers[TransportHeaders.S3BodyKey] = s3BodyKey.StringValue;
+                        transportMessage.S3BodyKey = s3BodyKey.StringValue;
+                    }
+                }
+                else
+                {
+                    // When the MessageTypeFullName attribute is available, we're assuming native integration
+                    if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.MessageTypeFullName,
+                            out var enclosedMessageType))
+                    {
+                        var headers = new Dictionary<string, string>
+                            {
+                                { Headers.MessageId, messageId },
+                                { Headers.EnclosedMessageTypes, enclosedMessageType.StringValue },
+                                {
+                                    TransportHeaders.MessageTypeFullName, enclosedMessageType.StringValue
+                                } // we're copying over the value of the native message attribute into the headers, converting this into a nsb message
+                            };
+
+                        if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.S3BodyKey,
+                                out var s3BodyKey))
+                        {
+                            headers.Add(TransportHeaders.S3BodyKey, s3BodyKey.StringValue);
+                        }
+
+                        transportMessage = new TransportMessage
+                        {
+                            Headers = headers,
+                            S3BodyKey = s3BodyKey?.StringValue,
+                            Body = receivedMessage.Body
+                        };
+                    }
+                    else
+                    {
+                        transportMessage = SimpleJson.DeserializeObject<TransportMessage>(receivedMessage.Body);
+                    }
+                }
 
                 messageBody = await transportMessage.RetrieveBody(s3Client, s3BucketForLargeMessages, token).ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
-            catch (Exception ex)
+            catch (Exception ex) when (!ex.IsCausedBy(token))
             {
                 // Can't deserialize. This is a poison message
                 exception = ex;
                 isPoisonMessage = true;
             }
 
-            if (isPoisonMessage || messageBody == null || transportMessage == null)
+            if (isPoisonMessage || transportMessage == null)
             {
                 LogPoisonMessage(messageId, exception);
 
-                await MovePoisonMessageToErrorQueue(receivedMessage, messageId).ConfigureAwait(false);
+                await MovePoisonMessageToErrorQueue(receivedMessage).ConfigureAwait(false);
                 return;
             }
 
-            if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, CorrectClockSkew.GetClockCorrectionForEndpoint(awsEndpointUrl)))
+            if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, sqsClient.Config.ClockOffset))
             {
                 // here we also want to use the native message id because the core demands it like that
-                await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, lambdaContext, token).ConfigureAwait(false);
+                await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, receivedMessage, receivedLambdaMessage, lambdaContext, token).ConfigureAwait(false);
             }
 
             // Always delete the message from the queue.
@@ -258,7 +300,7 @@
             await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey).ConfigureAwait(false);
         }
 
-        static bool IsMessageExpired(SQSEvent.SQSMessage receivedMessage, Dictionary<string, string> headers, string messageId, TimeSpan clockOffset)
+        static bool IsMessageExpired(Message receivedMessage, Dictionary<string, string> headers, string messageId, TimeSpan clockOffset)
         {
             if (!headers.TryGetValue(TransportHeaders.TimeToBeReceived, out var rawTtbr))
             {
@@ -272,7 +314,7 @@
                 return false;
             }
 
-            var sentDateTime = receivedMessage.GetAdjustedDateTimeFromServerSetAttributes(clockOffset);
+            var sentDateTime = receivedMessage.GetAdjustedDateTimeFromServerSetAttributes("SentTimestamp", clockOffset);
             var expiresAt = sentDateTime + timeToBeReceived;
             var utcNow = DateTime.UtcNow;
             if (expiresAt > utcNow)
@@ -285,7 +327,7 @@
             return true;
         }
 
-        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, byte[] body, ILambdaContext lambdaContext, CancellationToken token)
+        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, byte[] body, Message nativeMessage, SQSEvent.SQSMessage nativeLambdaMessage, ILambdaContext lambdaContext, CancellationToken token)
         {
             var immediateProcessingAttempts = 0;
             var messageProcessedOk = false;
@@ -293,6 +335,17 @@
 
             while (!errorHandled && !messageProcessedOk)
             {
+                // set the native message on the context for advanced usage scenarios
+                var context = new ContextBag();
+                context.Set(nativeMessage);
+                context.Set(nativeLambdaMessage);
+
+                // We add it to the transport transaction to make it available in dispatching scenarios so we copy over message attributes when moving messages to the error/audit queue
+                var transportTransaction = new TransportTransaction();
+                transportTransaction.Set(nativeMessage);
+                transportTransaction.Set(nativeLambdaMessage);
+                transportTransaction.Set("IncomingMessageId", headers[Headers.MessageId]);
+
                 try
                 {
                     using (var messageContextCancellationTokenSource = new CancellationTokenSource())
@@ -303,7 +356,7 @@
                             body,
                             transportTransaction,
                             messageContextCancellationTokenSource,
-                            new ContextBag());
+                            context);
 
                         await Process(messageContext, lambdaContext).ConfigureAwait(false);
 
@@ -352,7 +405,7 @@
             return await pipeline.PushFailedMessage(errorContext).ConfigureAwait(false);
         }
 
-        async Task DeleteMessageAndBodyIfRequired(SQSEvent.SQSMessage message, string messageS3BodyKey)
+        async Task DeleteMessageAndBodyIfRequired(Message message, string messageS3BodyKey)
         {
             try
             {
@@ -371,22 +424,19 @@
             }
         }
 
-        async Task MovePoisonMessageToErrorQueue(SQSEvent.SQSMessage message, string messageId)
+        async Task MovePoisonMessageToErrorQueue(Message message)
         {
             try
             {
+                // Ok to use LINQ here since this is not really a hot path
+                var messageAttributeValues = message.MessageAttributes
+                    .ToDictionary(pair => pair.Key, messageAttribute => messageAttribute.Value);
+
                 await sqsClient.SendMessageAsync(new SendMessageRequest
                 {
                     QueueUrl = errorQueueUrl,
                     MessageBody = message.Body,
-                    MessageAttributes =
-                    {
-                        [Headers.MessageId] = new MessageAttributeValue
-                        {
-                            StringValue = messageId,
-                            DataType = "String"
-                        }
-                    }
+                    MessageAttributes = messageAttributeValues
                 }, CancellationToken.None).ConfigureAwait(false);
                 // The MessageAttributes on message are read-only attributes provided by SQS
                 // and can't be re-sent. Unfortunately all the SQS metadata
@@ -409,7 +459,7 @@
                     Logger.Warn($"Error returning poison message back to input queue at url {queueUrl}. Poison message will become available at the input queue again after the visibility timeout expires.", changeMessageVisibilityEx);
                 }
 
-                return;
+                throw;
             }
 
             try
@@ -444,16 +494,15 @@
 
         readonly Func<ILambdaContext, AwsLambdaSQSEndpointConfiguration> configurationFactory;
         readonly SemaphoreSlim semaphoreLock = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+
         PipelineInvoker pipeline;
         IEndpointInstance endpoint;
         IAmazonSQS sqsClient;
         IAmazonS3 s3Client;
         string s3BucketForLargeMessages;
-        string awsEndpointUrl;
         string queueUrl;
         string errorQueueUrl;
 
         static ILog Logger = LogManager.GetLogger(typeof(AwsLambdaSQSEndpoint));
-        static readonly TransportTransaction transportTransaction = new TransportTransaction();
     }
 }

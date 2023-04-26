@@ -2,13 +2,16 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.IO;
     using System.Linq;
+    using System.Text;
     using System.Threading.Tasks;
     using Amazon.Lambda.SQSEvents;
     using Amazon.Runtime;
     using Amazon.S3;
     using Amazon.S3.Model;
+    using Amazon.SimpleNotificationService;
     using Amazon.SQS;
     using Amazon.SQS.Model;
     using NUnit.Framework;
@@ -16,7 +19,13 @@
     [TestFixture]
     class AwsLambdaSQSEndpointTestBase
     {
+        protected const string DelayedDeliveryQueueSuffix = "-delay.fifo";
+        const int QueueDelayInSeconds = 900; // 15 * 60
+
         protected string QueueName { get; set; }
+
+        protected string DelayQueueName { get; set; }
+
         protected string ErrorQueueName { get; set; }
 
         protected string QueueNamePrefix { get; set; }
@@ -51,6 +60,17 @@
                 }
             });
             RegisterQueueNameToCleanup(ErrorQueueName);
+            DelayQueueName = $"{QueueName}{DelayedDeliveryQueueSuffix}";
+            _ = await sqsClient.CreateQueueAsync(new CreateQueueRequest(DelayQueueName)
+            {
+                Attributes = new Dictionary<string, string>
+                {
+                    { "FifoQueue", "true" },
+                    { QueueAttributeName.DelaySeconds, QueueDelayInSeconds.ToString(CultureInfo.InvariantCulture)}
+                }
+            });
+            RegisterQueueNameToCleanup(DelayQueueName);
+
             s3Client = CreateS3Client();
             KeyPrefix = QueueNamePrefix;
         }
@@ -90,7 +110,7 @@
         {
             var endpointConfiguration = new EndpointConfiguration($"{QueueNamePrefix}sender");
             endpointConfiguration.SendOnly();
-            endpointConfiguration.UsePersistence<InMemoryPersistence>();
+
             var transport = endpointConfiguration.UseTransport<SqsTransport>();
             transport.ClientFactory(CreateSQSClient);
             var s3 = transport.S3(BucketName, KeyPrefix);
@@ -112,12 +132,49 @@
             {
                 MaxNumberOfMessages = count,
                 WaitTimeSeconds = 20,
+                AttributeNames = new List<string> { "SentTimestamp" },
+                MessageAttributeNames = new List<string> { "*" }
             };
 
             var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);
 
             return receivedMessages.ToSQSEvent();
         }
+
+        protected async Task<SQSEvent> GenerateAndReceiveNativeSQSEvent(Dictionary<string, MessageAttributeValue> messageAttributeValues, string message, bool base64Encode = true)
+        {
+            var body = base64Encode ? Convert.ToBase64String(Encoding.UTF8.GetBytes(message)) : message;
+
+            var sendMessageRequest = new SendMessageRequest
+            {
+                QueueUrl = createdQueue.QueueUrl,
+                MessageAttributes = messageAttributeValues,
+                MessageBody = body
+            };
+
+            await sqsClient.SendMessageAsync(sendMessageRequest)
+                .ConfigureAwait(false);
+
+            var receiveRequest = new ReceiveMessageRequest(createdQueue.QueueUrl)
+            {
+                MaxNumberOfMessages = 10,
+                WaitTimeSeconds = 20,
+                AttributeNames = new List<string> { "SentTimestamp" },
+                MessageAttributeNames = new List<string> { "*" }
+            };
+
+            var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);
+
+            return receivedMessages.ToSQSEvent();
+        }
+
+        protected async Task UploadMessageBodyToS3(string key, string body) =>
+            await s3Client.PutObjectAsync(new PutObjectRequest
+            {
+                Key = $"{key}",
+                BucketName = BucketName,
+                ContentBody = body
+            });
 
         protected async Task<int> CountMessagesInErrorQueue()
         {
@@ -127,10 +184,31 @@
             return response.ApproximateNumberOfMessages;
         }
 
+        protected async Task<SQSEvent> RetrieveMessagesInErrorQueue(int maxMessageCount = 10)
+        {
+            var receiveRequest = new ReceiveMessageRequest(createdErrorQueue.QueueUrl)
+            {
+                MaxNumberOfMessages = maxMessageCount,
+                WaitTimeSeconds = 20,
+                AttributeNames = new List<string> { "SentTimestamp" },
+                MessageAttributeNames = new List<string> { "*" }
+            };
+
+            var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);
+
+            return receivedMessages.ToSQSEvent();
+        }
+
         public static IAmazonSQS CreateSQSClient()
         {
             var credentials = new EnvironmentVariablesAWSCredentials();
             return new AmazonSQSClient(credentials);
+        }
+
+        public static IAmazonSimpleNotificationService CreateSNSClient()
+        {
+            var credentials = new EnvironmentVariablesAWSCredentials();
+            return new AmazonSimpleNotificationServiceClient(credentials);
         }
 
         public static IAmazonS3 CreateS3Client()
