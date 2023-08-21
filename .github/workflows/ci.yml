@@ -19,9 +19,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: windows-2019
+          - os: windows-2022
             name: Windows
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             name: Linux
       fail-fast: false
     steps:
@@ -33,13 +33,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.1
         with:
-          fetch-depth: 0      
+          fetch-depth: 0
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4.0.0
         with:
-          dotnet-version: |
-            7.0.x
-            6.0.x
+          dotnet-version: 8.0.x
+          dotnet-quality: 'preview'
       - name: Build
         run: dotnet build src --configuration Release
       - name: Upload packages
