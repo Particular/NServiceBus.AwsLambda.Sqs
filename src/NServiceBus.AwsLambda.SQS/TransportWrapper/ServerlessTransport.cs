@@ -6,7 +6,7 @@
     using NServiceBus;
     using Transport;
 
-    sealed class ServerlessTransport : TransportDefinition
+    sealed partial class ServerlessTransport : TransportDefinition
     {
         ServerlessTransportInfrastructure serverlessTransportInfrastructure;
 
@@ -27,19 +27,6 @@
 
             return serverlessTransportInfrastructure;
         }
-
-        public ServerlessTransportInfrastructure GetTransportInfrastructure(IEndpointInstance _) =>
-            // IEndpointInstance is only required to guarantee that GetTransportInfrastructure can't be called before NServiceBus called Initialize.
-            serverlessTransportInfrastructure;
-
-#pragma warning disable CS0672 // Member overrides obsolete member
-#pragma warning disable CS0618 // Type or member is obsolete
-
-        public override string ToTransportAddress(QueueAddress address) => BaseTransport.ToTransportAddress(address);
-
-#pragma warning restore CS0618 // Type or member is obsolete
-#pragma warning restore CS0672 // Member overrides obsolete member
-
 
         public override IReadOnlyCollection<TransportTransactionMode> GetSupportedTransactionModes() => supportedTransactionModes;
 
