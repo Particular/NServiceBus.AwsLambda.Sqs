@@ -4,7 +4,7 @@
     using System.Threading.Tasks;
     using Transport;
 
-    sealed class PipelineInvoker : IMessageReceiver
+    sealed class PipelineInvoker : IMessageReceiver, IMessageProcessor
     {
         public PipelineInvoker(IMessageReceiver baseTransportReceiver) => this.baseTransportReceiver = baseTransportReceiver;
 

@@ -542,7 +542,7 @@
         {
             TypeInfoResolver = TransportMessageSerializerContext.Default
         };
-        PipelineInvoker pipeline;
+        IMessageProcessor pipeline;
         IEndpointInstance endpoint;
         IAmazonSQS sqsClient;
         S3Settings s3Settings;
