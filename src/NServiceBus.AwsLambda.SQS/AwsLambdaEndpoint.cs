@@ -41,6 +41,13 @@
             await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
+            if (isSendOnly)
+            {
+                throw new InvalidOperationException(
+                    $"This endpoint cannot process messages because it is configured in send-only mode. Remove the '{nameof(EndpointConfiguration)}.{nameof(EndpointConfiguration.SendOnly)}' configuration.'"
+                    );
+            }
+
             var processTasks = new List<Task>();
 
             foreach (var receivedMessage in @event.Records)
@@ -69,6 +76,8 @@
 
                         endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token)
                             .ConfigureAwait(false);
+
+                        isSendOnly = configuration.EndpointConfiguration.GetSettings().GetOrDefault<bool>("Endpoint.SendOnly");
 
                         pipeline = serverlessTransport.PipelineInvoker;
                     }
@@ -536,6 +545,7 @@
             }
         }
 
+        bool isSendOnly;
         readonly Func<ILambdaContext, AwsLambdaSQSEndpointConfiguration> configurationFactory;
         readonly SemaphoreSlim semaphoreLock = new(initialCount: 1, maxCount: 1);
         readonly JsonSerializerOptions transportMessageSerializerOptions = new()
