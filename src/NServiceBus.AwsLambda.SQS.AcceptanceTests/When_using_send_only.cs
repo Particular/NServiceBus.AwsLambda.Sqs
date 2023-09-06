@@ -22,10 +22,6 @@
             });
 
             Assert.ThrowsAsync<System.InvalidOperationException>(() => endpoint.Process(receivedMessages, null));
-
-            var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
-
-            Assert.AreEqual(0, messagesInErrorQueueCount, "Error queue count mismatch");
         }
 
         [Test]

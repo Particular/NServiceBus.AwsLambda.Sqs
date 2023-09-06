@@ -77,7 +77,6 @@
                         endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token)
                             .ConfigureAwait(false);
 
-                        isSendOnly = configuration.EndpointConfiguration.GetSettings().GetOrDefault<bool>("Endpoint.SendOnly");
 
                         pipeline = serverlessTransport.PipelineInvoker;
                     }
@@ -207,10 +206,15 @@
 
             sqsClient = configuration.Transport.SqsClient;
 
-            queueUrl = await GetQueueUrl(settingsHolder.EndpointName())
-                .ConfigureAwait(false);
-            errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress())
-                .ConfigureAwait(false);
+            isSendOnly = settingsHolder.GetOrDefault<bool>("Endpoint.SendOnly");
+
+            if (!isSendOnly)
+            {
+                queueUrl = await GetQueueUrl(settingsHolder.EndpointName())
+                    .ConfigureAwait(false);
+                errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress())
+                    .ConfigureAwait(false);
+            }
 
             s3Settings = configuration.Transport.S3;
 
