@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NServiceBus.AwsLambda.SQS..Analyzer\NServiceBus.AwsLambda.SQS.Analyzer.csproj" />
+    <ProjectReference Include="..\NServiceBus.AwsLambda.SQS.Analyzer\NServiceBus.AwsLambda.SQS.Analyzer.csproj" />
     <ProjectReference Include="..\NServiceBus.AwsLambda.SQS\NServiceBus.AwsLambda.SQS.csproj" />
   </ItemGroup>
   
