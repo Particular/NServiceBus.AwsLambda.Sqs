@@ -66,7 +66,7 @@
         internal static readonly DiagnosticDescriptor UseTransportNotAllowed = new DiagnosticDescriptor(
              id: UseTransportNotAllowedId,
              title: "UseTransport is not supported in Aws Lambda",
-             messageFormat: "The package configures Amazon SQS transport by default. Use ServiceBusTriggeredEndpointConfiguration.Transport to access the transport configuration.",
+             messageFormat: "The package configures Amazon SQS transport by default. Use AwsLambdaSQSEndpointConfiguration.Transport to access the transport configuration.",
              category: DiagnosticCategory,
              defaultSeverity: DiagnosticSeverity.Warning,
              isEnabledByDefault: true
