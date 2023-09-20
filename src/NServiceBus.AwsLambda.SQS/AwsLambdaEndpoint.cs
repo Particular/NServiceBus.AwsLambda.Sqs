@@ -41,6 +41,13 @@
             await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
+            if (isSendOnly)
+            {
+                throw new InvalidOperationException(
+                    $"This endpoint cannot process messages because it is configured in send-only mode. Remove the '{nameof(EndpointConfiguration)}.{nameof(EndpointConfiguration.SendOnly)}' configuration.'"
+                    );
+            }
+
             var processTasks = new List<Task>();
 
             foreach (var receivedMessage in @event.Records)
@@ -69,6 +76,7 @@
 
                         endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token)
                             .ConfigureAwait(false);
+
 
                         pipeline = serverlessTransport.PipelineInvoker;
                     }
@@ -198,10 +206,15 @@
 
             sqsClient = configuration.Transport.SqsClient;
 
-            queueUrl = await GetQueueUrl(settingsHolder.EndpointName())
-                .ConfigureAwait(false);
-            errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress())
-                .ConfigureAwait(false);
+            isSendOnly = settingsHolder.GetOrDefault<bool>("Endpoint.SendOnly");
+
+            if (!isSendOnly)
+            {
+                queueUrl = await GetQueueUrl(settingsHolder.EndpointName())
+                    .ConfigureAwait(false);
+                errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress())
+                    .ConfigureAwait(false);
+            }
 
             s3Settings = configuration.Transport.S3;
 
@@ -536,13 +549,14 @@
             }
         }
 
+        bool isSendOnly;
         readonly Func<ILambdaContext, AwsLambdaSQSEndpointConfiguration> configurationFactory;
         readonly SemaphoreSlim semaphoreLock = new(initialCount: 1, maxCount: 1);
         readonly JsonSerializerOptions transportMessageSerializerOptions = new()
         {
             TypeInfoResolver = TransportMessageSerializerContext.Default
         };
-        PipelineInvoker pipeline;
+        IMessageProcessor pipeline;
         IEndpointInstance endpoint;
         IAmazonSQS sqsClient;
         S3Settings s3Settings;

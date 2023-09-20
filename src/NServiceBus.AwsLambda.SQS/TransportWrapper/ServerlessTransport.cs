@@ -10,6 +10,8 @@
     {
         // HINT: This constant is defined in NServiceBus but is not exposed
         const string MainReceiverId = "Main";
+        const string SendOnlyConfigKey = "Endpoint.SendOnly";
+
 
         public ServerlessTransport(TransportDefinition baseTransport)
             : base(baseTransport.TransportTransactionMode, baseTransport.SupportsDelayedDelivery, baseTransport.SupportsPublishSubscribe, baseTransport.SupportsTTBR) =>
@@ -17,7 +19,7 @@
 
         public TransportDefinition BaseTransport { get; }
 
-        public PipelineInvoker PipelineInvoker { get; private set; }
+        public IMessageProcessor PipelineInvoker { get; private set; }
 
         public override async Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
         {
@@ -25,10 +27,14 @@
                 .ConfigureAwait(false);
 
             var serverlessTransportInfrastructure = new ServerlessTransportInfrastructure(baseTransportInfrastructure);
-            PipelineInvoker = (PipelineInvoker)serverlessTransportInfrastructure.Receivers[MainReceiverId];
+
+            var isSendOnly = hostSettings.CoreSettings.GetOrDefault<bool>(SendOnlyConfigKey);
+
+            PipelineInvoker = isSendOnly
+                ? new SendOnlyMessageProcessor()
+                : (PipelineInvoker)serverlessTransportInfrastructure.Receivers[MainReceiverId];
 
             return serverlessTransportInfrastructure;
-
         }
 
 #pragma warning disable CS0672 // Member overrides obsolete member
