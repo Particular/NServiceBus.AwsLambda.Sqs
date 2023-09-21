@@ -74,7 +74,7 @@
         internal static readonly DiagnosticDescriptor OverrideLocalAddressNotAllowed = new DiagnosticDescriptor(
              id: OverrideLocalAddressNotAllowedId,
              title: "OverrideLocalAddress is not supported in AWS Lambda",
-             messageFormat: "The NServiceBus endpoint address in AWS Lambda is determined by the serverless template.",
+             messageFormat: "The NServiceBus endpoint address in AWS Lambda is determined by Lambda event source mapping.",
              category: DiagnosticCategory,
              defaultSeverity: DiagnosticSeverity.Error,
              isEnabledByDefault: true
