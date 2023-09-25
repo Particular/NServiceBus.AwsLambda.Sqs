@@ -40,7 +40,7 @@
         [SetUp]
         public async Task Setup()
         {
-            queueNames = new List<string>();
+            queueNames = [];
 
             Prefix = Path.GetFileNameWithoutExtension(Path.GetRandomFileName()).ToLowerInvariant();
 
