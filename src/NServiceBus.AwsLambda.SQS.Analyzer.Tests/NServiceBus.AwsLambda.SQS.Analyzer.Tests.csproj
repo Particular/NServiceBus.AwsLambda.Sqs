@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+    <TargetFrameworks>net8.0</TargetFrameworks>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\NServiceBusTests.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
@@ -19,5 +19,5 @@
     <ProjectReference Include="..\NServiceBus.AwsLambda.SQS.Analyzer\NServiceBus.AwsLambda.SQS.Analyzer.csproj" />
     <ProjectReference Include="..\NServiceBus.AwsLambda.SQS\NServiceBus.AwsLambda.SQS.csproj" />
   </ItemGroup>
-  
+
 </Project>
