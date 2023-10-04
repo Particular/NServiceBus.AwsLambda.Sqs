@@ -49,7 +49,6 @@
             }
 
             var processTasks = new List<Task>();
-
             foreach (var receivedMessage in @event.Records)
             {
                 processTasks.Add(ProcessMessage(receivedMessage, lambdaContext, cancellationToken));
@@ -77,6 +76,18 @@
                         endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token)
                             .ConfigureAwait(false);
 
+                        // for the sample:
+                        // does auto-subscribe work correctly?
+                        // installers??
+                        // acking messages
+
+                        //TODO 
+                        // we need to access the transport infra
+                        // but use the ToTransportAddress API
+                        //queueUrl = await GetQueueUrl(settingsHolder.EndpointName())
+                        //    .ConfigureAwait(false);
+                        //errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress())
+                        //    .ConfigureAwait(false);
 
                         pipeline = serverlessTransport.PipelineInvoker;
                     }
