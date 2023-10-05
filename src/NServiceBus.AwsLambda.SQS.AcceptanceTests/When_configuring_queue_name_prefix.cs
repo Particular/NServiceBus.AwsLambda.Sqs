@@ -40,7 +40,8 @@
                 advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
 
                 //TODO create separate test for error queue?
-                //advanced.SendFailedMessagesTo(ErrorQueueName);
+                //TODO requires explicit error queue config: can we reduce this error-prone duplication across all tests?
+                advanced.SendFailedMessagesTo(ErrorQueueName.Substring(Prefix.Length));
 
                 return configuration;
             });
