@@ -16,6 +16,7 @@
     using Configuration.AdvancedExtensibility;
     using Extensibility;
     using Logging;
+    using Microsoft.Extensions.DependencyInjection;
     using Transport;
 
     /// <summary>
@@ -73,21 +74,29 @@
                         var serverlessTransport = await Initialize(configuration)
                             .ConfigureAwait(false);
 
-                        endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token)
-                            .ConfigureAwait(false);
+                        var serviceCollection = new ServiceCollection();
+                        var startableEndpoint = EndpointWithExternallyManagedContainer.Create(configuration.EndpointConfiguration,
+                            serviceCollection);
+                        var serviceProvider = serviceCollection.BuildServiceProvider();
+
+
+
+                        endpoint = await startableEndpoint.Start(serviceProvider, token).ConfigureAwait(false);
+
+                        var settingsHolder = configuration.EndpointConfiguration.GetSettings();
+                        isSendOnly = settingsHolder.GetOrDefault<bool>("Endpoint.SendOnly");
+                        if (!isSendOnly)
+                        {
+                            var addressTranslator = serviceProvider.GetRequiredService<ITransportAddressResolver>();
+                            queueUrl = await GetQueueUrl(serverlessTransport.PipelineInvoker.ReceiveAddress).ConfigureAwait(false);
+                            errorQueueUrl = await GetQueueUrl(
+                                addressTranslator.ToTransportAddress(new QueueAddress(settingsHolder.ErrorQueueAddress()))).ConfigureAwait(false);
+                        }
 
                         // for the sample:
                         // does auto-subscribe work correctly?
                         // installers??
                         // acking messages
-
-                        //TODO 
-                        // we need to access the transport infra
-                        // but use the ToTransportAddress API
-                        //queueUrl = await GetQueueUrl(settingsHolder.EndpointName())
-                        //    .ConfigureAwait(false);
-                        //errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress())
-                        //    .ConfigureAwait(false);
 
                         pipeline = serverlessTransport.PipelineInvoker;
                     }
@@ -211,40 +220,28 @@
                 .ConfigureAwait(false);
         }
 
-        async Task<ServerlessTransport> Initialize(AwsLambdaSQSEndpointConfiguration configuration)
+        Task<ServerlessTransport> Initialize(AwsLambdaSQSEndpointConfiguration configuration)
         {
-            var settingsHolder = configuration.AdvancedConfiguration.GetSettings();
-
             sqsClient = configuration.Transport.SqsClient;
-
-            isSendOnly = settingsHolder.GetOrDefault<bool>("Endpoint.SendOnly");
-
-            if (!isSendOnly)
-            {
-                queueUrl = await GetQueueUrl(settingsHolder.EndpointName())
-                    .ConfigureAwait(false);
-                errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress())
-                    .ConfigureAwait(false);
-            }
 
             s3Settings = configuration.Transport.S3;
 
             var serverlessTransport = new ServerlessTransport(configuration.Transport);
             configuration.EndpointConfiguration.UseTransport(serverlessTransport);
 
-            return serverlessTransport;
+            return Task.FromResult(serverlessTransport);
         }
 
         async Task<string> GetQueueUrl(string queueName)
         {
-            var sanitizedQueueName = QueueNameHelper.GetSanitizedQueueName(queueName);
+            //var sanitizedQueueName = QueueNameHelper.GetSanitizedQueueName(queueName);
             try
             {
-                return (await sqsClient.GetQueueUrlAsync(sanitizedQueueName).ConfigureAwait(false)).QueueUrl;
+                return (await sqsClient.GetQueueUrlAsync(queueName).ConfigureAwait(false)).QueueUrl;
             }
             catch (Exception e)
             {
-                Logger.Error($"Failed to obtain the queue URL for queue {sanitizedQueueName} (derived from configured name {queueName}).", e);
+                Logger.Error($"Failed to obtain the queue URL for queue {queueName} (derived from configured name {queueName}).", e);
                 throw;
             }
         }
