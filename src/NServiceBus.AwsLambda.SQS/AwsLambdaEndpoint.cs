@@ -13,7 +13,6 @@
     using Amazon.SQS.Model;
     using AwsLambda.SQS;
     using AwsLambda.SQS.TransportWrapper;
-    using Configuration.AdvancedExtensibility;
     using Extensibility;
     using Logging;
     using Transport;
@@ -79,15 +78,16 @@
 
                         endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token).ConfigureAwait(false);
 
-                        var settingsHolder = configuration.EndpointConfiguration.GetSettings();
-                        isSendOnly = settingsHolder.GetOrDefault<bool>("Endpoint.SendOnly");
+                        var transportInfrastructure = serverlessTransport.GetTransportInfrastructure(endpoint);
+                        isSendOnly = transportInfrastructure.IsSendOnly;
+
                         if (!isSendOnly)
                         {
-                            queueUrl = await GetQueueUrl(serverlessTransport.PipelineInvoker.ReceiveAddress).ConfigureAwait(false);
-                            errorQueueUrl = await GetQueueUrl(serverlessTransport.ErrorQueueAddress).ConfigureAwait(false);
+                            queueUrl = await GetQueueUrl(transportInfrastructure.PipelineInvoker.ReceiveAddress).ConfigureAwait(false);
+                            errorQueueUrl = await GetQueueUrl(transportInfrastructure.ErrorQueueAddress).ConfigureAwait(false);
                         }
 
-                        pipeline = serverlessTransport.PipelineInvoker;
+                        pipeline = transportInfrastructure.PipelineInvoker;
                     }
                 }
                 finally
@@ -211,7 +211,6 @@
 
         async Task<string> GetQueueUrl(string queueName)
         {
-            //var sanitizedQueueName = QueueNameHelper.GetSanitizedQueueName(queueName);
             try
             {
                 return (await sqsClient.GetQueueUrlAsync(queueName).ConfigureAwait(false)).QueueUrl;
