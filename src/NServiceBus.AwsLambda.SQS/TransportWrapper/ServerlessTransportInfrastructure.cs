@@ -22,7 +22,7 @@
             Dispatcher = baseTransportInfrastructure.Dispatcher;
             Receivers = baseTransportInfrastructure.Receivers.ToDictionary(r => r.Key, r => (IMessageReceiver)new PipelineInvoker(r.Value));
 
-            IsSendOnly = Receivers.Count > 0;
+            IsSendOnly = Receivers.Count == 0;
             PipelineInvoker = IsSendOnly
                 ? new SendOnlyMessageProcessor()
                 : (PipelineInvoker)Receivers[MainReceiverId];
