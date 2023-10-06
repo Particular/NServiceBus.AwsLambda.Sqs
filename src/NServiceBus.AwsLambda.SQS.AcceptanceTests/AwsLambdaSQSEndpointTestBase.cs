@@ -78,6 +78,9 @@
         [TearDown]
         public async Task TearDown()
         {
+            // clear queue name prefix after each test, otherwise classes with multiple tests in the same class will run into issues
+            QueueNamePrefix = null;
+
             var queueUrls = queueNames.Select(name => sqsClient.GetQueueUrlAsync(name));
             await Task.WhenAll(queueUrls);
             var queueDeletions = queueUrls.Select(x => x.Result.QueueUrl).Select(url => sqsClient.DeleteQueueAsync(url));
