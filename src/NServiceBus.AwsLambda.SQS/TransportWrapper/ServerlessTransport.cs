@@ -33,7 +33,7 @@
             var isSendOnly = hostSettings.CoreSettings.GetOrDefault<bool>(SendOnlyConfigKey);
 
             ErrorQueueAddress = isSendOnly
-                ? baseTransportInfrastructure.ToTransportAddress(new QueueAddress(receivers[0].ErrorQueue)) 
+                ? baseTransportInfrastructure.ToTransportAddress(new QueueAddress(receivers[0].ErrorQueue))
                 : null;
             PipelineInvoker = isSendOnly
                 ? new SendOnlyMessageProcessor()
