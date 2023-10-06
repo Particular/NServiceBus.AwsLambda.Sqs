@@ -1,6 +1,7 @@
 ﻿namespace NServiceBus.AwsLambda.SQS.TransportWrapper
 {
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using NServiceBus;
@@ -12,6 +13,7 @@
         const string MainReceiverId = "Main";
         const string SendOnlyConfigKey = "Endpoint.SendOnly";
 
+        public string ErrorQueueAddress { get; set; }
 
         public ServerlessTransport(TransportDefinition baseTransport)
             : base(baseTransport.TransportTransactionMode, baseTransport.SupportsDelayedDelivery, baseTransport.SupportsPublishSubscribe, baseTransport.SupportsTTBR) =>
@@ -25,11 +27,14 @@
         {
             var baseTransportInfrastructure = await BaseTransport.Initialize(hostSettings, receivers, sendingAddresses, cancellationToken)
                 .ConfigureAwait(false);
-
             var serverlessTransportInfrastructure = new ServerlessTransportInfrastructure(baseTransportInfrastructure);
+
 
             var isSendOnly = hostSettings.CoreSettings.GetOrDefault<bool>(SendOnlyConfigKey);
 
+            ErrorQueueAddress = isSendOnly
+                ? baseTransportInfrastructure.ToTransportAddress(new QueueAddress(receivers[0].ErrorQueue)) 
+                : null;
             PipelineInvoker = isSendOnly
                 ? new SendOnlyMessageProcessor()
                 : (PipelineInvoker)serverlessTransportInfrastructure.Receivers[MainReceiverId];

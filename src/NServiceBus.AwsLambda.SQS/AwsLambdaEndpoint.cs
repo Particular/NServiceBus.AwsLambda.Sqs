@@ -16,7 +16,6 @@
     using Configuration.AdvancedExtensibility;
     using Extensibility;
     using Logging;
-    using Microsoft.Extensions.DependencyInjection;
     using Transport;
 
     /// <summary>
@@ -71,32 +70,22 @@
                     {
                         var configuration = configurationFactory(executionContext);
 
-                        var serverlessTransport = await Initialize(configuration)
-                            .ConfigureAwait(false);
+                        sqsClient = configuration.Transport.SqsClient;
 
-                        var serviceCollection = new ServiceCollection();
-                        var startableEndpoint = EndpointWithExternallyManagedContainer.Create(configuration.EndpointConfiguration,
-                            serviceCollection);
-                        var serviceProvider = serviceCollection.BuildServiceProvider();
+                        s3Settings = configuration.Transport.S3;
 
+                        var serverlessTransport = new ServerlessTransport(configuration.Transport);
+                        configuration.EndpointConfiguration.UseTransport(serverlessTransport);
 
-
-                        endpoint = await startableEndpoint.Start(serviceProvider, token).ConfigureAwait(false);
+                        endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token).ConfigureAwait(false);
 
                         var settingsHolder = configuration.EndpointConfiguration.GetSettings();
                         isSendOnly = settingsHolder.GetOrDefault<bool>("Endpoint.SendOnly");
                         if (!isSendOnly)
                         {
-                            var addressTranslator = serviceProvider.GetRequiredService<ITransportAddressResolver>();
                             queueUrl = await GetQueueUrl(serverlessTransport.PipelineInvoker.ReceiveAddress).ConfigureAwait(false);
-                            errorQueueUrl = await GetQueueUrl(
-                                addressTranslator.ToTransportAddress(new QueueAddress(settingsHolder.ErrorQueueAddress()))).ConfigureAwait(false);
+                            errorQueueUrl = await GetQueueUrl(serverlessTransport.ErrorQueueAddress).ConfigureAwait(false);
                         }
-
-                        // for the sample:
-                        // does auto-subscribe work correctly?
-                        // installers??
-                        // acking messages
 
                         pipeline = serverlessTransport.PipelineInvoker;
                     }
@@ -218,18 +207,6 @@
 
             await endpoint.Unsubscribe(eventType)
                 .ConfigureAwait(false);
-        }
-
-        Task<ServerlessTransport> Initialize(AwsLambdaSQSEndpointConfiguration configuration)
-        {
-            sqsClient = configuration.Transport.SqsClient;
-
-            s3Settings = configuration.Transport.S3;
-
-            var serverlessTransport = new ServerlessTransport(configuration.Transport);
-            configuration.EndpointConfiguration.UseTransport(serverlessTransport);
-
-            return Task.FromResult(serverlessTransport);
         }
 
         async Task<string> GetQueueUrl(string queueName)
