@@ -7,8 +7,6 @@
 
     //TODO: verify that outgoing messages contain the correct replyto address/other queue related headers
     //TODO: verify outgoing messages are taking into account the prefix on routing - potentially something for SQS transport repo itself - do we also need to docs?
-    //TODO: do we want a test where the non-prefixed queue exists (and we expect a different path of the code to cause a failure)
-    //TODO: add similar test for error queue related behavior of the Lambda endpoint
     class When_configuring_queue_name_prefix : AwsLambdaSQSEndpointTestBase
     {
         public string Prefix { get; } = "test-";
@@ -21,7 +19,7 @@
         }
 
         [Test]
-        public async Task The_message_should_be_received()
+        public async Task The_message_should_be_received_from_prefixed_queue()
         {
             // the prefix will be configured using the transport's prefix configuration therefore we remove it for the endpoint name
             var endpointName = QueueName.Substring(Prefix.Length);
