@@ -67,25 +67,7 @@
                 {
                     if (pipeline == null)
                     {
-                        var configuration = configurationFactory(executionContext);
-
-                        sqsClient = configuration.Transport.SqsClient;
-
-                        s3Settings = configuration.Transport.S3;
-
-                        var serverlessTransport = new ServerlessTransport(configuration.Transport);
-                        configuration.EndpointConfiguration.UseTransport(serverlessTransport);
-
-                        endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token).ConfigureAwait(false);
-
-                        var transportInfrastructure = serverlessTransport.GetTransportInfrastructure(endpoint);
-                        isSendOnly = transportInfrastructure.IsSendOnly;
-
-                        if (!isSendOnly)
-                        {
-                            queueUrl = await GetQueueUrl(transportInfrastructure.PipelineInvoker.ReceiveAddress).ConfigureAwait(false);
-                            errorQueueUrl = await GetQueueUrl(transportInfrastructure.ErrorQueueAddress).ConfigureAwait(false);
-                        }
+                        var transportInfrastructure = await Initialize(executionContext, token).ConfigureAwait(false);
 
                         pipeline = transportInfrastructure.PipelineInvoker;
                     }
@@ -95,6 +77,30 @@
                     _ = semaphoreLock.Release();
                 }
             }
+        }
+
+        async Task<ServerlessTransportInfrastructure> Initialize(ILambdaContext executionContext, CancellationToken token)
+        {
+            var configuration = configurationFactory(executionContext);
+
+            sqsClient = configuration.Transport.SqsClient;
+            s3Settings = configuration.Transport.S3;
+
+            var serverlessTransport = new ServerlessTransport(configuration.Transport);
+            configuration.EndpointConfiguration.UseTransport(serverlessTransport);
+
+            endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token).ConfigureAwait(false);
+
+            var transportInfrastructure = serverlessTransport.GetTransportInfrastructure(endpoint);
+            isSendOnly = transportInfrastructure.IsSendOnly;
+
+            if (!isSendOnly)
+            {
+                queueUrl = await GetQueueUrl(transportInfrastructure.PipelineInvoker.ReceiveAddress).ConfigureAwait(false);
+                errorQueueUrl = await GetQueueUrl(transportInfrastructure.ErrorQueueAddress).ConfigureAwait(false);
+            }
+
+            return transportInfrastructure;
         }
 
         /// <inheritdoc />
