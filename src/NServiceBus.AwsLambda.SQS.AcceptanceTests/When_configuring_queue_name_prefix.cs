@@ -5,15 +5,12 @@
     using System.IO;
     using System.Threading.Tasks;
 
-    //TODO: verify that outgoing messages contain the correct replyto address/other queue related headers
-    //TODO: verify outgoing messages are taking into account the prefix on routing - potentially something for SQS transport repo itself - do we also need to docs?
     class When_configuring_queue_name_prefix : AwsLambdaSQSEndpointTestBase
     {
         public string Prefix { get; } = "test-";
 
         public override Task Setup()
         {
-            // TODO: Should we rename QueueNamePrefix to something else to indicate that it doesn't use the transports setting and is only used to create unique queue names?
             QueueNamePrefix = Prefix + Path.GetFileNameWithoutExtension(Path.GetRandomFileName()).ToLowerInvariant();
             return base.Setup();
         }
@@ -37,8 +34,7 @@
                 var advanced = configuration.AdvancedConfiguration;
                 advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
 
-                //TODO create separate test for error queue?
-                //TODO requires explicit error queue config: can we reduce this error-prone duplication across all tests?
+                // SQS will add the specified queue prefix to the configured error queue
                 advanced.SendFailedMessagesTo(ErrorQueueName.Substring(Prefix.Length));
 
                 return configuration;
