@@ -6,6 +6,8 @@
 
     class SendOnlyMessageProcessor : IMessageProcessor
     {
+        public string ReceiveAddress => string.Empty;
+
         public Task<ErrorHandleResult> PushFailedMessage(ErrorContext errorContext) => throw new InvalidOperationException(
                     $"This endpoint cannot process messages because it is configured in send-only mode. Remove the '{nameof(EndpointConfiguration)}.{nameof(EndpointConfiguration.SendOnly)}' configuration.'"
                     );
