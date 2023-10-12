@@ -22,24 +22,24 @@
         protected const string DelayedDeliveryQueueSuffix = "-delay.fifo";
         const int QueueDelayInSeconds = 900; // 15 * 60
 
-        protected string QueueName { get; set; }
+        protected string QueueName { get; private set; }
 
-        protected string DelayQueueName { get; set; }
+        protected string DelayQueueName { get; private set; }
 
-        protected string ErrorQueueName { get; set; }
+        protected string ErrorQueueName { get; private set; }
 
         protected string QueueNamePrefix { get; set; }
 
         protected string BucketName { get; } = Environment.GetEnvironmentVariable("NSERVICEBUS_AMAZONSQS_S3BUCKET");
-        protected string KeyPrefix { get; set; }
+        protected string KeyPrefix { get; private set; }
 
 
         [SetUp]
-        public async Task Setup()
+        public virtual async Task Setup()
         {
             queueNames = new List<string>();
 
-            QueueNamePrefix = Path.GetFileNameWithoutExtension(Path.GetRandomFileName()).ToLowerInvariant();
+            QueueNamePrefix ??= Path.GetFileNameWithoutExtension(Path.GetRandomFileName()).ToLowerInvariant();
 
             QueueName = $"{QueueNamePrefix}testqueue";
             sqsClient = CreateSQSClient();
@@ -78,6 +78,9 @@
         [TearDown]
         public async Task TearDown()
         {
+            // clear queue name prefix after each test, otherwise classes with multiple tests in the same class will run into issues
+            QueueNamePrefix = null;
+
             var queueUrls = queueNames.Select(name => sqsClient.GetQueueUrlAsync(name));
             await Task.WhenAll(queueUrls);
             var queueDeletions = queueUrls.Select(x => x.Result.QueueUrl).Select(url => sqsClient.DeleteQueueAsync(url));
@@ -106,7 +109,7 @@
             queueNames.Add(queueName);
         }
 
-        protected async Task<SQSEvent> GenerateAndReceiveSQSEvent<T>(int count) where T : new()
+        protected async Task<SQSEvent> GenerateAndReceiveSQSEvent<T>(int count = 1) where T : new()
         {
             var endpointConfiguration = new EndpointConfiguration($"{QueueNamePrefix}sender");
             endpointConfiguration.SendOnly();
