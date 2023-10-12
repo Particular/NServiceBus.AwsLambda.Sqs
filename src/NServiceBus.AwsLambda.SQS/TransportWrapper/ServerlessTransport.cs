@@ -19,6 +19,12 @@
 
         public override async Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
         {
+            if (receivers.Length == 0)
+            {
+                throw new Exception(
+                    "SendOnly endpoints are not supported in this version. Upgrade to a newer version of the NServiceBus.AwsLambda.SQS package to use SendOnly endpoints");
+            }
+
             var baseTransportInfrastructure = await BaseTransport.Initialize(hostSettings, receivers, sendingAddresses, cancellationToken)
                 .ConfigureAwait(false);
             var errorQueueAddress = baseTransportInfrastructure.ToTransportAddress(new QueueAddress(receivers[0].ErrorQueue));
