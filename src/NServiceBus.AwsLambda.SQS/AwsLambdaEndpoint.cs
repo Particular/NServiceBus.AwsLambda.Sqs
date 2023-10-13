@@ -85,7 +85,8 @@
 
             var transportInfrastructure = serverlessTransport.GetTransportInfrastructure(endpoint);
 
-            queueUrl = await GetQueueUrl(transportInfrastructure.PipelineInvoker.ReceiveAddress).ConfigureAwait(false);
+            receiveQueueAddress = transportInfrastructure.PipelineInvoker.ReceiveAddress;
+            receiveQueueUrl = await GetQueueUrl(receiveQueueAddress).ConfigureAwait(false);
             errorQueueUrl = await GetQueueUrl(transportInfrastructure.ErrorQueueAddress).ConfigureAwait(false);
 
             return transportInfrastructure;
@@ -382,7 +383,7 @@
                         new Dictionary<string, string>(headers),
                         body,
                         transportTransaction,
-                        queueUrl,
+                        receiveQueueAddress,
                         context);
 
                     await Process(messageContext, lambdaContext, token).ConfigureAwait(false);
@@ -404,7 +405,7 @@
                             body,
                             transportTransaction,
                             immediateProcessingAttempts,
-                            queueUrl,
+                            receiveQueueAddress,
                             context);
 
                         errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext).ConfigureAwait(false);
@@ -442,7 +443,7 @@
             try
             {
                 // should not be cancelled
-                await sqsClient.DeleteMessageAsync(queueUrl, message.ReceiptHandle, CancellationToken.None)
+                await sqsClient.DeleteMessageAsync(receiveQueueUrl, message.ReceiptHandle, CancellationToken.None)
                     .ConfigureAwait(false);
             }
             catch (ReceiptHandleIsInvalidException ex)
@@ -483,7 +484,7 @@
                 {
                     await sqsClient.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest
                     {
-                        QueueUrl = queueUrl,
+                        QueueUrl = receiveQueueUrl,
                         ReceiptHandle = message.ReceiptHandle,
                         VisibilityTimeout = 0
                     }, CancellationToken.None)
@@ -491,7 +492,7 @@
                 }
                 catch (Exception changeMessageVisibilityEx)
                 {
-                    Logger.Warn($"Error returning poison message back to input queue at url {queueUrl}. Poison message will become available at the input queue again after the visibility timeout expires.", changeMessageVisibilityEx);
+                    Logger.Warn($"Error returning poison message back to input queue at url {receiveQueueUrl}. Poison message will become available at the input queue again after the visibility timeout expires.", changeMessageVisibilityEx);
                 }
 
                 throw;
@@ -501,14 +502,14 @@
             {
                 await sqsClient.DeleteMessageAsync(new DeleteMessageRequest
                 {
-                    QueueUrl = queueUrl,
+                    QueueUrl = receiveQueueUrl,
                     ReceiptHandle = message.ReceiptHandle
                 }, CancellationToken.None)
                     .ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                Logger.Warn($"Error removing poison message from input queue {queueUrl}. This may cause duplicate poison messages in the error queue for this endpoint.", ex);
+                Logger.Warn($"Error removing poison message from input queue {receiveQueueAddress}. This may cause duplicate poison messages in the error queue for this endpoint.", ex);
             }
 
             // If there is a message body in S3, simply leave it there
@@ -538,7 +539,8 @@
         IEndpointInstance endpoint;
         IAmazonSQS sqsClient;
         S3Settings s3Settings;
-        string queueUrl;
+        string receiveQueueAddress;
+        string receiveQueueUrl;
         string errorQueueUrl;
 
         static readonly ILog Logger = LogManager.GetLogger(typeof(AwsLambdaSQSEndpoint));
