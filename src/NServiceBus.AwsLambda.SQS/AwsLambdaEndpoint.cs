@@ -13,7 +13,6 @@
     using Amazon.SQS.Model;
     using AwsLambda.SQS;
     using AwsLambda.SQS.TransportWrapper;
-    using Configuration.AdvancedExtensibility;
     using Extensibility;
     using Logging;
     using Transport;
@@ -49,7 +48,6 @@
             }
 
             var processTasks = new List<Task>();
-
             foreach (var receivedMessage in @event.Records)
             {
                 processTasks.Add(ProcessMessage(receivedMessage, lambdaContext, cancellationToken));
@@ -69,16 +67,9 @@
                 {
                     if (pipeline == null)
                     {
-                        var configuration = configurationFactory(executionContext);
+                        var transportInfrastructure = await Initialize(executionContext, token).ConfigureAwait(false);
 
-                        var serverlessTransport = await Initialize(configuration)
-                            .ConfigureAwait(false);
-
-                        endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token)
-                            .ConfigureAwait(false);
-
-
-                        pipeline = serverlessTransport.PipelineInvoker;
+                        pipeline = transportInfrastructure.PipelineInvoker;
                     }
                 }
                 finally
@@ -86,6 +77,30 @@
                     _ = semaphoreLock.Release();
                 }
             }
+        }
+
+        async Task<ServerlessTransportInfrastructure> Initialize(ILambdaContext executionContext, CancellationToken token)
+        {
+            var configuration = configurationFactory(executionContext);
+
+            sqsClient = configuration.Transport.SqsClient;
+            s3Settings = configuration.Transport.S3;
+
+            var serverlessTransport = new ServerlessTransport(configuration.Transport);
+            configuration.EndpointConfiguration.UseTransport(serverlessTransport);
+
+            endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token).ConfigureAwait(false);
+
+            var transportInfrastructure = serverlessTransport.GetTransportInfrastructure(endpoint);
+            isSendOnly = transportInfrastructure.IsSendOnly;
+
+            if (!isSendOnly)
+            {
+                queueUrl = await GetQueueUrl(transportInfrastructure.PipelineInvoker.ReceiveAddress).ConfigureAwait(false);
+                errorQueueUrl = await GetQueueUrl(transportInfrastructure.ErrorQueueAddress).ConfigureAwait(false);
+            }
+
+            return transportInfrastructure;
         }
 
         /// <inheritdoc />
@@ -200,40 +215,15 @@
                 .ConfigureAwait(false);
         }
 
-        async Task<ServerlessTransport> Initialize(AwsLambdaSQSEndpointConfiguration configuration)
-        {
-            var settingsHolder = configuration.AdvancedConfiguration.GetSettings();
-
-            sqsClient = configuration.Transport.SqsClient;
-
-            isSendOnly = settingsHolder.GetOrDefault<bool>("Endpoint.SendOnly");
-
-            if (!isSendOnly)
-            {
-                queueUrl = await GetQueueUrl(settingsHolder.EndpointName())
-                    .ConfigureAwait(false);
-                errorQueueUrl = await GetQueueUrl(settingsHolder.ErrorQueueAddress())
-                    .ConfigureAwait(false);
-            }
-
-            s3Settings = configuration.Transport.S3;
-
-            var serverlessTransport = new ServerlessTransport(configuration.Transport);
-            configuration.EndpointConfiguration.UseTransport(serverlessTransport);
-
-            return serverlessTransport;
-        }
-
         async Task<string> GetQueueUrl(string queueName)
         {
-            var sanitizedQueueName = QueueNameHelper.GetSanitizedQueueName(queueName);
             try
             {
-                return (await sqsClient.GetQueueUrlAsync(sanitizedQueueName).ConfigureAwait(false)).QueueUrl;
+                return (await sqsClient.GetQueueUrlAsync(queueName).ConfigureAwait(false)).QueueUrl;
             }
             catch (Exception e)
             {
-                Logger.Error($"Failed to obtain the queue URL for queue {sanitizedQueueName} (derived from configured name {queueName}).", e);
+                Logger.Error($"Failed to obtain the queue URL for queue {queueName} (derived from configured name {queueName}).", e);
                 throw;
             }
         }
