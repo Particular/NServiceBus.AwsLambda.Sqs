@@ -193,7 +193,7 @@ class AwsLambdaSQSEndpointMessageProcessor
                     new Dictionary<string, string>(headers),
                     body,
                     transportTransaction,
-                    receiveQueueUrl,
+                    receiveQueueAddress,
                     context);
 
                 await pipeline.PushMessage(messageContext).ConfigureAwait(false);
