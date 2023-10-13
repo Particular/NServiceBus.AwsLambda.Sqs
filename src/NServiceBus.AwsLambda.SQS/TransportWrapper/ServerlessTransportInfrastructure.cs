@@ -7,11 +7,25 @@
 
     sealed class ServerlessTransportInfrastructure : TransportInfrastructure
     {
-        public ServerlessTransportInfrastructure(TransportInfrastructure baseTransportInfrastructure)
+        // HINT: This constant is defined in NServiceBus but is not exposed
+        const string MainReceiverId = "Main";
+
+        public PipelineInvoker PipelineInvoker { get; private set; }
+
+        public string ErrorQueueAddress { get; set; }
+
+        public bool IsSendOnly { get; private set; }
+
+        public ServerlessTransportInfrastructure(TransportInfrastructure baseTransportInfrastructure, string errorQueueAddress)
         {
             this.baseTransportInfrastructure = baseTransportInfrastructure;
             Dispatcher = baseTransportInfrastructure.Dispatcher;
             Receivers = baseTransportInfrastructure.Receivers.ToDictionary(r => r.Key, r => (IMessageReceiver)new PipelineInvoker(r.Value));
+
+            IsSendOnly = Receivers.Count == 0;
+            PipelineInvoker = (PipelineInvoker)Receivers[MainReceiverId];
+
+            ErrorQueueAddress = errorQueueAddress;
         }
 
         public override Task Shutdown(CancellationToken cancellationToken = default) => baseTransportInfrastructure.Shutdown(cancellationToken);

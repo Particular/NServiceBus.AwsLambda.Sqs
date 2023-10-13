@@ -1,5 +1,6 @@
 ﻿namespace NServiceBus.AwsLambda.SQS.TransportWrapper
 {
+    using System;
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
@@ -8,8 +9,7 @@
 
     sealed class ServerlessTransport : TransportDefinition
     {
-        // HINT: This constant is defined in NServiceBus but is not exposed
-        const string MainReceiverId = "Main";
+        ServerlessTransportInfrastructure serverlessTransportInfrastructure;
 
         public ServerlessTransport(TransportDefinition baseTransport)
             : base(baseTransport.TransportTransactionMode, baseTransport.SupportsDelayedDelivery, baseTransport.SupportsPublishSubscribe, baseTransport.SupportsTTBR) =>
@@ -17,19 +17,27 @@
 
         public TransportDefinition BaseTransport { get; }
 
-        public PipelineInvoker PipelineInvoker { get; private set; }
-
         public override async Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
         {
+            if (receivers.Length == 0)
+            {
+                throw new Exception(
+                    "SendOnly endpoints are not supported in this version. Upgrade to a newer version of the NServiceBus.AwsLambda.SQS package to use SendOnly endpoints");
+            }
+
             var baseTransportInfrastructure = await BaseTransport.Initialize(hostSettings, receivers, sendingAddresses, cancellationToken)
                 .ConfigureAwait(false);
+            var errorQueueAddress = baseTransportInfrastructure.ToTransportAddress(new QueueAddress(receivers[0].ErrorQueue));
 
-            var serverlessTransportInfrastructure = new ServerlessTransportInfrastructure(baseTransportInfrastructure);
-            PipelineInvoker = (PipelineInvoker)serverlessTransportInfrastructure.Receivers[MainReceiverId];
+            serverlessTransportInfrastructure = new ServerlessTransportInfrastructure(baseTransportInfrastructure, errorQueueAddress);
 
             return serverlessTransportInfrastructure;
 
         }
+
+        public ServerlessTransportInfrastructure GetTransportInfrastructure(IEndpointInstance _) =>
+            // IEndpointInstance is only required to guarantee that GetTransportInfrastructure can't be called before NServiceBus called Initialize.
+            serverlessTransportInfrastructure;
 
 #pragma warning disable CS0672 // Member overrides obsolete member
 #pragma warning disable CS0618 // Type or member is obsolete
