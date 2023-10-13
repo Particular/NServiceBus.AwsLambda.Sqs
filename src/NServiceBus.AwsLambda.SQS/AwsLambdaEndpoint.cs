@@ -394,7 +394,7 @@
                         new Dictionary<string, string>(headers),
                         body,
                         transportTransaction,
-                        receiveQueueUrl,
+                        receiveQueueAddress,
                         context);
 
                     await Process(messageContext, lambdaContext, token).ConfigureAwait(false);
