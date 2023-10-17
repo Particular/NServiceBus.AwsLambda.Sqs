@@ -2,7 +2,6 @@
 {
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
 
     class When_a_SQSEvent_with_large_payloads_is_processed : AwsLambdaSQSEndpointTestBase
@@ -16,14 +15,10 @@
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
-                var transport = configuration.Transport;
+                var configuration = DefaultLambdaEndpointConfiguration(context);
 
-                transport.S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client());
+                configuration.Transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
 
-                var advanced = configuration.AdvancedConfiguration;
-                advanced.SendFailedMessagesTo(ErrorQueueName);
-                advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
                 return configuration;
             });
 

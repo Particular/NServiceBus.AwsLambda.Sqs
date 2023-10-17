@@ -14,7 +14,7 @@
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
+                var configuration = DefaultLambdaEndpointConfiguration();
 
                 var advanced = configuration.AdvancedConfiguration;
                 advanced.SendOnly();
@@ -29,7 +29,7 @@
         {
             var context = new TestContext();
 
-            var destinationEndpointName = $"{QueueNamePrefix}DestinationEndpoint";
+            var destinationEndpointName = $"{Prefix}DestinationEndpoint";
             RegisterQueueNameToCleanup(destinationEndpointName);
             RegisterQueueNameToCleanup(destinationEndpointName + DelayedDeliveryQueueSuffix);
 
@@ -37,7 +37,7 @@
 
             var destinationTransport = new SqsTransport(CreateSQSClient(), CreateSNSClient());
 
-            destinationConfiguration.SendFailedMessagesTo(ErrorQueueName);
+            destinationConfiguration.SendFailedMessagesTo(ErrorQueueAddress);
             destinationConfiguration.EnableInstallers();
             destinationConfiguration.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
             destinationConfiguration.UseTransport(destinationTransport);
@@ -46,14 +46,9 @@
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
-
+                var configuration = DefaultLambdaEndpointConfiguration(context);
                 configuration.RoutingSettings.RouteToEndpoint(typeof(SentMessage), destinationEndpointName);
-
-                var advanced = configuration.AdvancedConfiguration;
-                advanced.SendOnly();
-                advanced.SendFailedMessagesTo(ErrorQueueName);
-                advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
+                configuration.AdvancedConfiguration.SendOnly();
                 return configuration;
             });
 

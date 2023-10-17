@@ -1,5 +1,6 @@
 ﻿namespace NServiceBus.AcceptanceTests
 {
+    using System;
     using System.Threading.Tasks;
     using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
@@ -13,36 +14,32 @@
 
             var context = new TestContext();
 
-            var destinationEndpointName = $"{QueueNamePrefix}DestinationEndpoint";
-            RegisterQueueNameToCleanup(destinationEndpointName);
-            RegisterQueueNameToCleanup(destinationEndpointName + DelayedDeliveryQueueSuffix);
+            var destinationEndpointName = "DestinationEndpoint";
+            RegisterQueueNameToCleanup($"{Prefix}{destinationEndpointName}");
+            RegisterQueueNameToCleanup($"{Prefix}{destinationEndpointName}{DelayedDeliveryQueueSuffix}");
 
             var destinationConfiguration = new EndpointConfiguration(destinationEndpointName);
 
-            var destinationTransport = new SqsTransport(CreateSQSClient(), CreateSNSClient());
-
-            destinationConfiguration.SendFailedMessagesTo(ErrorQueueName);
+            destinationConfiguration.SendFailedMessagesTo(ErrorQueueAddress);
             destinationConfiguration.EnableInstallers();
             destinationConfiguration.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
-            destinationConfiguration.UseTransport(destinationTransport);
+            destinationConfiguration.UseTransport(new SqsTransport(CreateSQSClient(), CreateSNSClient())
+            {
+                QueueNamePrefix = Prefix
+            });
 
             var destinationEndpoint = await Endpoint.Start(destinationConfiguration);
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
-
+                var configuration = DefaultLambdaEndpointConfiguration(context);
                 configuration.RoutingSettings.RouteToEndpoint(typeof(SentMessage), destinationEndpointName);
-
-                var advanced = configuration.AdvancedConfiguration;
-                advanced.SendFailedMessagesTo(ErrorQueueName);
-                advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
                 return configuration;
             });
 
             await endpoint.Process(receivedMessages, null);
 
-            await context.MessageReceived.Task;
+            await context.MessageReceived.Task.WaitAsync(TimeSpan.FromMinutes(1));
 
             await destinationEndpoint.Stop();
 
