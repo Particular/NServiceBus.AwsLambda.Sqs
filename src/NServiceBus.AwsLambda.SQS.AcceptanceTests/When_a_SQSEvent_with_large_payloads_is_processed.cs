@@ -13,14 +13,7 @@
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
-            {
-                var configuration = DefaultLambdaEndpointConfiguration(context);
-
-                configuration.Transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
-
-                return configuration;
-            });
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
 
             await endpoint.Process(receivedMessages, null);
 

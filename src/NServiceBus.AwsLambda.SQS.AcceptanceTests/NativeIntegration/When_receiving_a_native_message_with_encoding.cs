@@ -24,15 +24,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
-            {
-                var configuration = DefaultLambdaEndpointConfiguration(context);
-                var transport = configuration.Transport;
-
-                transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
-
-                return configuration;
-            });
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
 
             await endpoint.Process(receivedMessages, null);
 
@@ -56,14 +48,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
-            {
-                var configuration = DefaultLambdaEndpointConfiguration(context);
-                var transport = configuration.Transport;
-
-                transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
-                return configuration;
-            });
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
 
             await endpoint.Process(receivedMessages, null);
 
@@ -89,15 +74,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
-            {
-                var configuration = DefaultLambdaEndpointConfiguration(context);
-                var transport = configuration.Transport;
-
-                transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
-
-                return configuration;
-            });
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
 
             await endpoint.Process(receivedMessages, null);
             var poisonMessages = await RetrieveMessagesInErrorQueue();
@@ -129,12 +106,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
                 var configuration = DefaultLambdaEndpointConfiguration();
-                var transport = configuration.Transport;
-
-                transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
-
-                var advanced = configuration.AdvancedConfiguration;
-                advanced.Recoverability().Immediate(s => s.NumberOfRetries(0));
+                configuration.AdvancedConfiguration.Recoverability().Immediate(s => s.NumberOfRetries(0));
                 return configuration;
             });
 
@@ -167,14 +139,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
-            {
-                var configuration = DefaultLambdaEndpointConfiguration(context);
-                var transport = configuration.Transport;
-
-                transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
-                return configuration;
-            });
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
 
             await endpoint.Process(receivedMessages, null);
 

@@ -15,9 +15,7 @@
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
                 var configuration = DefaultLambdaEndpointConfiguration();
-
-                var advanced = configuration.AdvancedConfiguration;
-                advanced.SendOnly();
+                configuration.AdvancedConfiguration.SendOnly();
                 return configuration;
             });
 

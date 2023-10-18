@@ -15,6 +15,7 @@
     using Amazon.SQS;
     using Amazon.SQS.Model;
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
     using NUnit.Framework;
 
     [TestFixture]
@@ -114,6 +115,8 @@
             var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
             configuration.Transport.QueueNamePrefix = Prefix;
             configuration.Transport.TopicNamePrefix = Prefix;
+            configuration.Transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
+
             var advanced = configuration.AdvancedConfiguration;
             advanced.SendFailedMessagesTo(ErrorQueueAddress);
 
