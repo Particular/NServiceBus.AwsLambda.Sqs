@@ -14,6 +14,8 @@
     using Amazon.SimpleNotificationService;
     using Amazon.SQS;
     using Amazon.SQS.Model;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
     using NUnit.Framework;
 
     [TestFixture]
@@ -22,45 +24,46 @@
         protected const string DelayedDeliveryQueueSuffix = "-delay.fifo";
         const int QueueDelayInSeconds = 900; // 15 * 60
 
-        protected string QueueName { get; private set; }
+        protected string QueueName => "testqueue";
+
+        protected string QueueAddress { get; private set; }
 
         protected string DelayQueueName { get; private set; }
 
-        protected string ErrorQueueName { get; private set; }
+        protected string ErrorQueueAddress { get; private set; }
 
-        protected string QueueNamePrefix { get; set; }
+        protected string Prefix { get; set; }
 
         protected string BucketName { get; } = Environment.GetEnvironmentVariable("NSERVICEBUS_AMAZONSQS_S3BUCKET");
-        protected string KeyPrefix { get; private set; }
 
 
         [SetUp]
-        public virtual async Task Setup()
+        public async Task Setup()
         {
             queueNames = new List<string>();
 
-            QueueNamePrefix ??= Path.GetFileNameWithoutExtension(Path.GetRandomFileName()).ToLowerInvariant();
+            Prefix = Path.GetFileNameWithoutExtension(Path.GetRandomFileName()).ToLowerInvariant();
 
-            QueueName = $"{QueueNamePrefix}testqueue";
+            QueueAddress = $"{Prefix}{QueueName}";
             sqsClient = CreateSQSClient();
-            createdQueue = await sqsClient.CreateQueueAsync(new CreateQueueRequest(QueueName)
+            createdQueue = await sqsClient.CreateQueueAsync(new CreateQueueRequest(QueueAddress)
             {
                 Attributes = new Dictionary<string, string>
                 {
                     {QueueAttributeName.VisibilityTimeout, "10"}
                 }
             });
-            RegisterQueueNameToCleanup(QueueName);
-            ErrorQueueName = $"{QueueNamePrefix}error";
-            createdErrorQueue = await sqsClient.CreateQueueAsync(new CreateQueueRequest(ErrorQueueName)
+            RegisterQueueNameToCleanup(QueueAddress);
+            ErrorQueueAddress = $"{Prefix}error";
+            createdErrorQueue = await sqsClient.CreateQueueAsync(new CreateQueueRequest(ErrorQueueAddress)
             {
                 Attributes = new Dictionary<string, string>
                 {
                     {QueueAttributeName.VisibilityTimeout, "10"}
                 }
             });
-            RegisterQueueNameToCleanup(ErrorQueueName);
-            DelayQueueName = $"{QueueName}{DelayedDeliveryQueueSuffix}";
+            RegisterQueueNameToCleanup(ErrorQueueAddress);
+            DelayQueueName = $"{QueueAddress}{DelayedDeliveryQueueSuffix}";
             _ = await sqsClient.CreateQueueAsync(new CreateQueueRequest(DelayQueueName)
             {
                 Attributes = new Dictionary<string, string>
@@ -72,15 +75,11 @@
             RegisterQueueNameToCleanup(DelayQueueName);
 
             s3Client = CreateS3Client();
-            KeyPrefix = QueueNamePrefix;
         }
 
         [TearDown]
         public async Task TearDown()
         {
-            // clear queue name prefix after each test, otherwise classes with multiple tests in the same class will run into issues
-            QueueNamePrefix = null;
-
             var queueUrls = queueNames.Select(name => sqsClient.GetQueueUrlAsync(name));
             await Task.WhenAll(queueUrls);
             var queueDeletions = queueUrls.Select(x => x.Result.QueueUrl).Select(url => sqsClient.DeleteQueueAsync(url));
@@ -88,7 +87,7 @@
             var objects = await s3Client.ListObjectsAsync(new ListObjectsRequest
             {
                 BucketName = BucketName,
-                Prefix = KeyPrefix
+                Prefix = Prefix
             });
 
             if (objects.S3Objects.Any())
@@ -104,6 +103,26 @@
             }
         }
 
+        protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration<TTestContext>(TTestContext testContext)
+        {
+            var configuration = DefaultLambdaEndpointConfiguration();
+            configuration.AdvancedConfiguration.RegisterComponents(c => c.AddSingleton(typeof(TTestContext), testContext));
+            return configuration;
+        }
+
+        protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration()
+        {
+            var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
+            configuration.Transport.QueueNamePrefix = Prefix;
+            configuration.Transport.TopicNamePrefix = Prefix;
+            configuration.Transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
+
+            var advanced = configuration.AdvancedConfiguration;
+            advanced.SendFailedMessagesTo(ErrorQueueAddress);
+
+            return configuration;
+        }
+
         protected void RegisterQueueNameToCleanup(string queueName)
         {
             queueNames.Add(queueName);
@@ -111,12 +130,12 @@
 
         protected async Task<SQSEvent> GenerateAndReceiveSQSEvent<T>(int count = 1) where T : new()
         {
-            var endpointConfiguration = new EndpointConfiguration($"{QueueNamePrefix}sender");
+            var endpointConfiguration = new EndpointConfiguration($"{Prefix}sender");
             endpointConfiguration.SendOnly();
 
             var transport = new SqsTransport(CreateSQSClient(), CreateSNSClient())
             {
-                S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client())
+                S3 = new S3Settings(BucketName, Prefix, CreateS3Client())
             };
 
             endpointConfiguration.UseTransport(transport);
@@ -126,7 +145,7 @@
 
             for (var i = 0; i < count; i++)
             {
-                await endpointInstance.Send(QueueName, new T());
+                await endpointInstance.Send(QueueAddress, new T());
             }
 
             await endpointInstance.Stop();

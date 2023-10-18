@@ -6,7 +6,6 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
     using System.Threading.Tasks;
     using System.Xml.Linq;
     using Amazon.SQS.Model;
-    using Microsoft.Extensions.DependencyInjection;
     using NServiceBus.AcceptanceTests;
     using NUnit.Framework;
 
@@ -31,18 +30,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
-            {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
-                var transport = configuration.Transport;
-
-                transport.S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client());
-
-                var advanced = configuration.AdvancedConfiguration;
-                advanced.SendFailedMessagesTo(ErrorQueueName);
-                advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
-                return configuration;
-            });
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
 
             await endpoint.Process(receivedMessages, null);
 
@@ -69,18 +57,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
-            {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
-                var transport = configuration.Transport;
-
-                transport.S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client());
-
-                var advanced = configuration.AdvancedConfiguration;
-                advanced.SendFailedMessagesTo(ErrorQueueName);
-                advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
-                return configuration;
-            });
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
 
             await endpoint.Process(receivedMessages, null);
 
@@ -111,18 +88,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
-            {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
-                var transport = configuration.Transport;
-
-                transport.S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client());
-
-                var advanced = configuration.AdvancedConfiguration;
-                advanced.SendFailedMessagesTo(ErrorQueueName);
-                advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
-                return configuration;
-            });
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
 
             await endpoint.Process(receivedMessages, null);
 
@@ -153,13 +119,11 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
+                var configuration = DefaultLambdaEndpointConfiguration();
                 var transport = configuration.Transport;
 
-                transport.S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client());
+                transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
 
-                var advanced = configuration.AdvancedConfiguration;
-                advanced.SendFailedMessagesTo(ErrorQueueName);
                 return configuration;
             });
 
@@ -198,14 +162,13 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
+                var configuration = DefaultLambdaEndpointConfiguration();
                 var transport = configuration.Transport;
 
-                transport.S3 = new S3Settings(BucketName, KeyPrefix, CreateS3Client());
+                transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
 
                 var advanced = configuration.AdvancedConfiguration;
                 advanced.Recoverability().Immediate(s => s.NumberOfRetries(0));
-                advanced.SendFailedMessagesTo(ErrorQueueName);
                 return configuration;
             });
 

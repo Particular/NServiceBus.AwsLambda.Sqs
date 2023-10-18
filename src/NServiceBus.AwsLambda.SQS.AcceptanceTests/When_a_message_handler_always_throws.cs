@@ -3,7 +3,6 @@
     using System;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
 
     class When_a_message_handler_always_throws : AwsLambdaSQSEndpointTestBase
@@ -15,15 +14,7 @@
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
-            {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
-
-                var advanced = configuration.AdvancedConfiguration;
-                advanced.SendFailedMessagesTo(ErrorQueueName);
-                advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
-                return configuration;
-            });
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
 
             await endpoint.Process(receivedMessages, null);
 

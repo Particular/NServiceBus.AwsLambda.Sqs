@@ -4,7 +4,6 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Amazon.Lambda.SQSEvents;
-    using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
 
     using Message = Amazon.SQS.Model.Message;
@@ -18,15 +17,7 @@
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
-            {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
-
-                var advanced = configuration.AdvancedConfiguration;
-                advanced.SendFailedMessagesTo(ErrorQueueName);
-                advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
-                return configuration;
-            });
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
 
             await endpoint.Process(receivedMessages, null);
 
@@ -44,15 +35,7 @@
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
-            {
-                var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
-
-                var advanced = configuration.AdvancedConfiguration;
-                advanced.SendFailedMessagesTo(ErrorQueueName);
-                advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
-                return configuration;
-            });
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
 
             await endpoint.Process(receivedMessages, null);
 
