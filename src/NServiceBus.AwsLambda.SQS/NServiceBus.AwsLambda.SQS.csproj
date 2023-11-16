@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
@@ -14,7 +14,7 @@
     <PackageReference Include="Amazon.Lambda.Core" Version="[2.1.0, 3.0.0)" />
     <PackageReference Include="Amazon.Lambda.SQSEvents" Version="[2.1.0, 3.0.0)" />
     <PackageReference Include="NServiceBus.AmazonSQS" Version="[6.1.1, 7.0.0)" />
-    <PackageReference Include="Particular.Packaging" Version="3.0.0" PrivateAssets="All" />
+    <PackageReference Include="Particular.Packaging" Version="4.0.0" PrivateAssets="All" />
   </ItemGroup>
 
 </Project>
