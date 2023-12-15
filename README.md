@@ -1,6 +1,6 @@
 # NServiceBus.AwsLambda.Sqs
 
-NServiceBus.AwsLambda.Sqs enables hosting NServiceBus endpoints with AWS Lambda using the Simple Queue Service as a trigger.
+NServiceBus.AwsLambda.Sqs enables hosting NServiceBus endpoints with [AWS Lambda](https://aws.amazon.com/lambda/) using the [Simple Queue Service](https://aws.amazon.com/sqs/) as a trigger.
 
 It is part of the [Particular Service Platform](https://particular.net/service-platform), which includes [NServiceBus](https://particular.net/nservicebus) and tools to build, monitor, and debug distributed systems.
 
