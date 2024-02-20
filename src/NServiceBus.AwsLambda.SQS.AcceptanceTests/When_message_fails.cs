@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System;
 using System.Linq;
+using Amazon.SQS.Model;
 
 class When_message_fails : AwsLambdaSQSEndpointTestBase
 {
@@ -72,6 +73,41 @@ class When_message_fails : AwsLambdaSQSEndpointTestBase
         StringAssert.Contains("Failed to process message", exception.Message);
         Assert.AreEqual("simulated exception", exception.InnerException.Message);
         Assert.AreEqual(0, await CountMessagesInErrorQueue());
+    }
+
+    [Test]
+    public async Task Should_allow_disabling_error_queue_without_the_error_queue_having_to_be_around()
+    {
+        // the prefix will be configured using the transport's prefix configuration therefore we remove it for the endpoint name
+        var endpointName = QueueName;
+
+        var sqsClient = CreateSQSClient();
+        var errorQueueUrl = await sqsClient.GetQueueUrlAsync(ErrorQueueName);
+        await sqsClient.DeleteQueueAsync(new DeleteQueueRequest(errorQueueUrl.QueueUrl));
+
+        var receivedMessages = await GenerateAndReceiveSQSEvent<TestMessage>();
+
+        var context = new TestContext();
+
+        var endpoint = new AwsLambdaSQSEndpoint(ctx =>
+        {
+            var configuration = new AwsLambdaSQSEndpointConfiguration(endpointName, CreateSQSClient(), CreateSNSClient());
+
+            configuration.DoNotSendMessagesToErrorQueue();
+
+            var advanced = configuration.AdvancedConfiguration;
+            advanced.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
+            advanced.Recoverability().Immediate(i => i.NumberOfRetries(0));
+            advanced.SendFailedMessagesTo(ErrorQueueName);
+
+            return configuration;
+        });
+
+        var exception = Assert.ThrowsAsync<Exception>(() => endpoint.Process(receivedMessages, null));
+
+        NUnit.Framework.TestContext.WriteLine(exception.StackTrace);
+        StringAssert.Contains("Failed to process message", exception.Message);
+        Assert.AreEqual("simulated exception", exception.InnerException.Message);
     }
 
     public class TestContext
