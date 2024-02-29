@@ -15,7 +15,6 @@
     using Amazon.SQS;
     using Amazon.SQS.Model;
     using Microsoft.Extensions.DependencyInjection;
-    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
     using NUnit.Framework;
 
     [TestFixture]
@@ -119,7 +118,7 @@
 
             var advanced = configuration.AdvancedConfiguration;
             advanced.SendFailedMessagesTo(ErrorQueueAddress);
-
+            advanced.UseSerialization<SystemJsonSerializer>();
             return configuration;
         }
 
