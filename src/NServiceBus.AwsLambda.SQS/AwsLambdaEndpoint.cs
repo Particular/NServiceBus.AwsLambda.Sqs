@@ -67,7 +67,7 @@
                 {
                     if (pipeline == null)
                     {
-                        var transportInfrastructure = await Initialize(executionContext, token).ConfigureAwait(false);
+                        var transportInfrastructure = await Initialize(executionContext, cancellationToken).ConfigureAwait(false);
 
                         pipeline = transportInfrastructure.PipelineInvoker;
                     }
@@ -79,7 +79,7 @@
             }
         }
 
-        async Task<ServerlessTransportInfrastructure> Initialize(ILambdaContext executionContext, CancellationToken token)
+        async Task<ServerlessTransportInfrastructure> Initialize(ILambdaContext executionContext, CancellationToken cancellationToken)
         {
             var configuration = configurationFactory(executionContext);
 
@@ -89,7 +89,7 @@
             var serverlessTransport = new ServerlessTransport(configuration.Transport);
             configuration.EndpointConfiguration.UseTransport(serverlessTransport);
 
-            endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token).ConfigureAwait(false);
+            endpoint = await Endpoint.Start(configuration.EndpointConfiguration, cancellationToken).ConfigureAwait(false);
 
             var transportInfrastructure = serverlessTransport.GetTransportInfrastructure(endpoint);
             isSendOnly = transportInfrastructure.IsSendOnly;
@@ -97,8 +97,8 @@
             if (!isSendOnly)
             {
                 receiveQueueAddress = transportInfrastructure.PipelineInvoker.ReceiveAddress;
-                receiveQueueUrl = await GetQueueUrl(receiveQueueAddress).ConfigureAwait(false);
-                errorQueueUrl = await GetQueueUrl(transportInfrastructure.ErrorQueueAddress).ConfigureAwait(false);
+                receiveQueueUrl = await GetQueueUrl(receiveQueueAddress, cancellationToken).ConfigureAwait(false);
+                errorQueueUrl = await GetQueueUrl(transportInfrastructure.ErrorQueueAddress, cancellationToken).ConfigureAwait(false);
             }
 
             return transportInfrastructure;
@@ -216,15 +216,15 @@
                 .ConfigureAwait(false);
         }
 
-        async Task<string> GetQueueUrl(string queueName)
+        async Task<string> GetQueueUrl(string queueName, CancellationToken cancellationToken)
         {
             try
             {
-                return (await sqsClient.GetQueueUrlAsync(queueName).ConfigureAwait(false)).QueueUrl;
+                return (await sqsClient.GetQueueUrlAsync(queueName, cancellationToken).ConfigureAwait(false)).QueueUrl;
             }
             catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
             {
-                Logger.Error($"Failed to obtain the queue URL for queue {queueName} (derived from configured name {queueName}).", e);
+                Logger.Error($"Failed to obtain the queue URL for queue {queueName} (derived from configured name {queueName}).", ex);
                 throw;
             }
         }
