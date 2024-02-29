@@ -24,7 +24,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context, useXmlSerializer: true));
 
             await endpoint.Process(receivedMessages, null);
 
@@ -48,7 +48,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context, useXmlSerializer: true));
 
             await endpoint.Process(receivedMessages, null);
 
@@ -74,7 +74,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context, useXmlSerializer: true));
 
             await endpoint.Process(receivedMessages, null);
             var poisonMessages = await RetrieveMessagesInErrorQueue();
@@ -105,7 +105,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
-                var configuration = DefaultLambdaEndpointConfiguration();
+                var configuration = DefaultLambdaEndpointConfiguration(useXmlSerializer: true);
                 configuration.AdvancedConfiguration.Recoverability().Immediate(s => s.NumberOfRetries(0));
                 return configuration;
             });
@@ -139,7 +139,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var context = new TestContext();
 
-            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context));
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(context, useXmlSerializer: true));
 
             await endpoint.Process(receivedMessages, null);
 

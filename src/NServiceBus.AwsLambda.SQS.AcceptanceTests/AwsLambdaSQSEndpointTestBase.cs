@@ -102,14 +102,14 @@
             }
         }
 
-        protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration<TTestContext>(TTestContext testContext)
+        protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration<TTestContext>(TTestContext testContext, bool useXmlSerializer = false)
         {
-            var configuration = DefaultLambdaEndpointConfiguration();
+            var configuration = DefaultLambdaEndpointConfiguration(useXmlSerializer);
             configuration.AdvancedConfiguration.RegisterComponents(c => c.AddSingleton(typeof(TTestContext), testContext));
             return configuration;
         }
 
-        protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration()
+        protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration(bool useXmlSerializer = false)
         {
             var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
             configuration.Transport.QueueNamePrefix = Prefix;
@@ -118,7 +118,16 @@
 
             var advanced = configuration.AdvancedConfiguration;
             advanced.SendFailedMessagesTo(ErrorQueueAddress);
-            advanced.UseSerialization<XmlSerializer>();
+
+            if (useXmlSerializer)
+            {
+                advanced.UseSerialization<XmlSerializer>();
+            }
+            else
+            {
+                advanced.UseSerialization<SystemJsonSerializer>();
+            }
+
             return configuration;
         }
 
@@ -137,6 +146,7 @@
                 S3 = new S3Settings(BucketName, Prefix, CreateS3Client())
             };
 
+            endpointConfiguration.UseSerialization<SystemJsonSerializer>();
             endpointConfiguration.UseTransport(transport);
 
             var endpointInstance = await Endpoint.Start(endpointConfiguration)
