@@ -4,18 +4,18 @@ namespace NServiceBus
     {
         public AwsLambdaSQSEndpoint(System.Func<Amazon.Lambda.Core.ILambdaContext, NServiceBus.AwsLambdaSQSEndpointConfiguration> configurationFactory) { }
         public System.Threading.Tasks.Task Process(Amazon.Lambda.SQSEvents.SQSEvent @event, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task Publish(object message, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
-        public System.Threading.Tasks.Task Publish(object message, NServiceBus.PublishOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
-        public System.Threading.Tasks.Task Publish<T>(System.Action<T> messageConstructor, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
-        public System.Threading.Tasks.Task Publish<T>(System.Action<T> messageConstructor, NServiceBus.PublishOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
-        public System.Threading.Tasks.Task Send(object message, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
-        public System.Threading.Tasks.Task Send(object message, NServiceBus.SendOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
-        public System.Threading.Tasks.Task Send<T>(System.Action<T> messageConstructor, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
-        public System.Threading.Tasks.Task Send<T>(System.Action<T> messageConstructor, NServiceBus.SendOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
-        public System.Threading.Tasks.Task Subscribe(System.Type eventType, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
-        public System.Threading.Tasks.Task Subscribe(System.Type eventType, NServiceBus.SubscribeOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
-        public System.Threading.Tasks.Task Unsubscribe(System.Type eventType, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
-        public System.Threading.Tasks.Task Unsubscribe(System.Type eventType, NServiceBus.UnsubscribeOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext) { }
+        public System.Threading.Tasks.Task Publish(object message, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Publish(object message, NServiceBus.PublishOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Publish<T>(System.Action<T> messageConstructor, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Publish<T>(System.Action<T> messageConstructor, NServiceBus.PublishOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Send(object message, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Send(object message, NServiceBus.SendOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Send<T>(System.Action<T> messageConstructor, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Send<T>(System.Action<T> messageConstructor, NServiceBus.SendOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Subscribe(System.Type eventType, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Subscribe(System.Type eventType, NServiceBus.SubscribeOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Unsubscribe(System.Type eventType, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Unsubscribe(System.Type eventType, NServiceBus.UnsubscribeOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public class AwsLambdaSQSEndpointConfiguration
     {
@@ -31,17 +31,17 @@ namespace NServiceBus
     public interface IAwsLambdaSQSEndpoint
     {
         System.Threading.Tasks.Task Process(Amazon.Lambda.SQSEvents.SQSEvent @event, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task Publish(object message, Amazon.Lambda.Core.ILambdaContext lambdaContext);
-        System.Threading.Tasks.Task Publish(object message, NServiceBus.PublishOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext);
-        System.Threading.Tasks.Task Publish<T>(System.Action<T> messageConstructor, Amazon.Lambda.Core.ILambdaContext lambdaContext);
-        System.Threading.Tasks.Task Publish<T>(System.Action<T> messageConstructor, NServiceBus.PublishOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext);
-        System.Threading.Tasks.Task Send(object message, Amazon.Lambda.Core.ILambdaContext lambdaContext);
-        System.Threading.Tasks.Task Send(object message, NServiceBus.SendOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext);
-        System.Threading.Tasks.Task Send<T>(System.Action<T> messageConstructor, Amazon.Lambda.Core.ILambdaContext lambdaContext);
-        System.Threading.Tasks.Task Send<T>(System.Action<T> messageConstructor, NServiceBus.SendOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext);
-        System.Threading.Tasks.Task Subscribe(System.Type eventType, Amazon.Lambda.Core.ILambdaContext lambdaContext);
-        System.Threading.Tasks.Task Subscribe(System.Type eventType, NServiceBus.SubscribeOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext);
-        System.Threading.Tasks.Task Unsubscribe(System.Type eventType, Amazon.Lambda.Core.ILambdaContext lambdaContext);
-        System.Threading.Tasks.Task Unsubscribe(System.Type eventType, NServiceBus.UnsubscribeOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext);
+        System.Threading.Tasks.Task Publish(object message, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Publish(object message, NServiceBus.PublishOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Publish<T>(System.Action<T> messageConstructor, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Publish<T>(System.Action<T> messageConstructor, NServiceBus.PublishOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Send(object message, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Send(object message, NServiceBus.SendOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Send<T>(System.Action<T> messageConstructor, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Send<T>(System.Action<T> messageConstructor, NServiceBus.SendOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Subscribe(System.Type eventType, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Subscribe(System.Type eventType, NServiceBus.SubscribeOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Unsubscribe(System.Type eventType, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Unsubscribe(System.Type eventType, NServiceBus.UnsubscribeOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
     }
 }
