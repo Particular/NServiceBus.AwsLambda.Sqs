@@ -118,7 +118,7 @@
 
             var advanced = configuration.AdvancedConfiguration;
             advanced.SendFailedMessagesTo(ErrorQueueAddress);
-            advanced.UseSerialization<SystemJsonSerializer>();
+            advanced.UseSerialization<XmlSerializer>();
             return configuration;
         }
 
