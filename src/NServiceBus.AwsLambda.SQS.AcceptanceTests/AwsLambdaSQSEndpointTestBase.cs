@@ -156,8 +156,8 @@
             {
                 MaxNumberOfMessages = count,
                 WaitTimeSeconds = 20,
-                AttributeNames = new List<string> { "SentTimestamp" },
-                MessageAttributeNames = new List<string> { "*" }
+                AttributeNames = ["SentTimestamp"],
+                MessageAttributeNames = ["*"]
             };
 
             var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);
@@ -183,8 +183,8 @@
             {
                 MaxNumberOfMessages = 10,
                 WaitTimeSeconds = 20,
-                AttributeNames = new List<string> { "SentTimestamp" },
-                MessageAttributeNames = new List<string> { "*" }
+                AttributeNames = ["SentTimestamp"],
+                MessageAttributeNames = ["*"]
             };
 
             var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);
@@ -214,8 +214,8 @@
             {
                 MaxNumberOfMessages = maxMessageCount,
                 WaitTimeSeconds = 20,
-                AttributeNames = new List<string> { "SentTimestamp" },
-                MessageAttributeNames = new List<string> { "*" }
+                AttributeNames = ["SentTimestamp"],
+                MessageAttributeNames = ["*"]
             };
 
             var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);

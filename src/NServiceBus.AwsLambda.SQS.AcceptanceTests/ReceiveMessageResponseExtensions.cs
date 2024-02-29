@@ -1,6 +1,5 @@
 ﻿namespace NServiceBus.AcceptanceTests
 {
-    using System.Collections.Generic;
     using Amazon.Lambda.SQSEvents;
     using Amazon.SQS.Model;
 
@@ -10,7 +9,7 @@
         {
             var @event = new SQSEvent
             {
-                Records = new List<SQSEvent.SQSMessage>()
+                Records = []
             };
             foreach (var message in response.Messages)
             {

@@ -30,11 +30,11 @@
 
         Task IMessageReceiver.StopReceive(CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task<ErrorHandleResult> PushFailedMessage(ErrorContext errorContext) => onError(errorContext);
+        public Task<ErrorHandleResult> PushFailedMessage(ErrorContext errorContext, CancellationToken cancellationToken = default) => onError(errorContext, cancellationToken);
 
         Task IMessageReceiver.ChangeConcurrency(PushRuntimeSettings limitations, CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task PushMessage(MessageContext messageContext) => onMessage.Invoke(messageContext);
+        public Task PushMessage(MessageContext messageContext, CancellationToken cancellationToken = default) => onMessage.Invoke(messageContext, cancellationToken);
 
         OnMessage onMessage;
         OnError onError;
