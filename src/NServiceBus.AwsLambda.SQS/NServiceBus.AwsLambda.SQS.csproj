@@ -18,8 +18,4 @@
     <PackageReference Include="Particular.Packaging" Version="3.0.0" PrivateAssets="All" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Update="Particular.Analyzers" Version="1.8.0" />
-  </ItemGroup>
-
 </Project>

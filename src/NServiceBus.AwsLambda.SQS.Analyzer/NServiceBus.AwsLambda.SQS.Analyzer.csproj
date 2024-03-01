@@ -16,10 +16,6 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.11.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Update="Particular.Analyzers" Version="1.8.0" />
-  </ItemGroup>
-
   <Target Name="UseMajorMinorPatchForAssemblyVersion" AfterTargets="MinVer">
     <PropertyGroup>
       <AssemblyVersion>$(MinVerMajor).$(MinVerMinor).$(MinVerPatch).0</AssemblyVersion>
