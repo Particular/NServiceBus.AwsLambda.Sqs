@@ -117,7 +117,6 @@
             configuration.Transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
 
             var advanced = configuration.AdvancedConfiguration;
-            advanced.SendFailedMessagesTo(ErrorQueueAddress);
 
             if (useXmlSerializer)
             {

@@ -35,7 +35,6 @@
 
             var destinationTransport = new SqsTransport(CreateSQSClient(), CreateSNSClient());
 
-            destinationConfiguration.SendFailedMessagesTo(ErrorQueueAddress);
             destinationConfiguration.UseSerialization<SystemJsonSerializer>();
             destinationConfiguration.EnableInstallers();
             destinationConfiguration.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));

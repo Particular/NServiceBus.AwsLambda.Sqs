@@ -21,7 +21,6 @@
             var destinationConfiguration = new EndpointConfiguration(destinationEndpointName);
 
             destinationConfiguration.UseSerialization<SystemJsonSerializer>();
-            destinationConfiguration.SendFailedMessagesTo(ErrorQueueAddress);
             destinationConfiguration.EnableInstallers();
             destinationConfiguration.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
             destinationConfiguration.UseTransport(new SqsTransport(CreateSQSClient(), CreateSNSClient())
