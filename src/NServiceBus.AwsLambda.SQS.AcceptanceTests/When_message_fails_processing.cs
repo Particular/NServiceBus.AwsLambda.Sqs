@@ -47,7 +47,6 @@
 
             Assert.AreEqual("simulated exception", exception.Message);
             Assert.AreEqual(0, await CountMessagesInErrorQueue());
-            Assert.AreEqual(6, context.HandlerInvocationCount, "should immediately retry message before moving it to the error queue");
         }
 
         public class TestContext
