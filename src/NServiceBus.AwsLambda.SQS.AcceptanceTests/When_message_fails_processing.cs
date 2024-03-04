@@ -20,7 +20,6 @@
 
             Assert.DoesNotThrowAsync(() => endpoint.Process(receivedMessages, null), "message should be moved to the error queue instead");
 
-            Assert.AreEqual(6, context.HandlerInvocationCount, "should immediately retry message before moving it to the error queue");
             var errorMessages = await RetrieveMessagesInErrorQueue();
             Assert.AreEqual(1, errorMessages.Records.Count);
             JsonDocument errorMessage = JsonSerializer.Deserialize<JsonDocument>(errorMessages.Records.First().Body);

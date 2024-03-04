@@ -103,12 +103,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             }, FailingMessageToSend);
 
-            var endpoint = new AwsLambdaSQSEndpoint(ctx =>
-            {
-                var configuration = DefaultLambdaEndpointConfiguration(useXmlSerializer: true);
-                configuration.AdvancedConfiguration.Recoverability().Immediate(s => s.NumberOfRetries(0));
-                return configuration;
-            });
+            var endpoint = new AwsLambdaSQSEndpoint(_ => DefaultLambdaEndpointConfiguration(useXmlSerializer: true));
 
             await endpoint.Process(receivedMessages, null);
             var poisonMessages = await RetrieveMessagesInErrorQueue();

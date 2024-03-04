@@ -167,8 +167,6 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
                 transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
 
-                var advanced = configuration.AdvancedConfiguration;
-                advanced.Recoverability().Immediate(s => s.NumberOfRetries(0));
                 return configuration;
             });
 

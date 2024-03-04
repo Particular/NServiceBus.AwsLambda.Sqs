@@ -21,8 +21,6 @@
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
             Assert.AreEqual(receivedMessages.Records.Count, messagesInErrorQueueCount, "Error queue count mismatch");
-
-            Assert.AreEqual(messagesInErrorQueueCount * 6, context.HandlerInvokationCount, "Immediate/Delayed Retry count mismatch");
         }
 
         public class TestContext

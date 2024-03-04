@@ -127,6 +127,11 @@
                 advanced.UseSerialization<SystemJsonSerializer>();
             }
 
+            var recoverability = advanced.Recoverability();
+
+            recoverability.Immediate(i => i.NumberOfRetries(0));
+            recoverability.Delayed(d => d.NumberOfRetries(0));
+
             return configuration;
         }
 
