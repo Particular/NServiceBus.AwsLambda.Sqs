@@ -1,7 +1,7 @@
 #nullable enable
 namespace NServiceBus.AwsLambda.SQS
 {
-    using System.Reflection;
+    using System.Runtime.CompilerServices;
     using Amazon.S3.Model;
 
     static class S3EncryptionMethodExtensions
@@ -13,9 +13,10 @@ namespace NServiceBus.AwsLambda.SQS
                 return;
             }
 
-            // TODO: Optimize
-            var methodInfo = encryptionMethod.GetType().GetMethod("ModifyGetRequest", BindingFlags.NonPublic | BindingFlags.Instance);
-            methodInfo!.Invoke(encryptionMethod, new object?[] { request });
+            ModifyGetRequest(encryptionMethod, request);
         }
+
+        [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "ModifyGetRequest")]
+        static extern void ModifyGetRequest(S3EncryptionMethod encryptionMethod, GetObjectRequest get);
     }
 }
