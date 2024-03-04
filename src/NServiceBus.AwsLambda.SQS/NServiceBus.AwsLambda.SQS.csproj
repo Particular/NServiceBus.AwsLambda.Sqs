@@ -15,7 +15,7 @@
     <PackageReference Include="Amazon.Lambda.SQSEvents" Version="[2.2.0, 3.0.0)" />
     <PackageReference Include="NServiceBus.AmazonSQS" Version="[7.0.0, 8.0.0)" />
     <PackageReference Include="Obsolete.Fody" Version="5.3.0" PrivateAssets="All" />
-    <PackageReference Include="Particular.Packaging" Version="3.0.0" PrivateAssets="All" />
+    <PackageReference Include="Particular.Packaging" Version="4.1.0" PrivateAssets="All" />
   </ItemGroup>
 
 </Project>
