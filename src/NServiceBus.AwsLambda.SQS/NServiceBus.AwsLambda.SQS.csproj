@@ -7,13 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\NServiceBus.AwsLambda.SQS.Analyzer\bin\$(Configuration)\$(AnalyzerTargetFramework)\NServiceBus.AwsLambda.SQS.Analyzer.dll" Pack="true" PackagePath="analyzers/dotnet/cs/NServiceBus.AwsLambda.SQS.Analyzer.dll" Link="NServiceBus.AwsLambda.SQS.Analyzer.dll" Visible="false" />
+    <None Include="..\NServiceBus.AwsLambda.SQS.Analyzer\bin\$(Configuration)\$(AnalyzerTargetFramework)\NServiceBus.AwsLambda.SQS.Analyzer.dll" Pack="true" PackagePath="analyzers/dotnet/roslyn4.8/cs/NServiceBus.AwsLambda.SQS.Analyzer.dll" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Amazon.Lambda.Core" Version="[2.2.0, 3.0.0)" />
     <PackageReference Include="Amazon.Lambda.SQSEvents" Version="[2.2.0, 3.0.0)" />
     <PackageReference Include="NServiceBus.AmazonSQS" Version="[7.0.0, 8.0.0)" />
+    <PackageReference Include="Fody" Version="6.8.0" PrivateAssets="All" />
     <PackageReference Include="Obsolete.Fody" Version="5.3.0" PrivateAssets="All" />
     <PackageReference Include="Particular.Packaging" Version="4.1.0" PrivateAssets="All" />
   </ItemGroup>

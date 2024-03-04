@@ -13,7 +13,7 @@ namespace NServiceBus.AwsLambda.SQS.Analyzer.Tests
         public Task DiagnosticIsReportedForOptions(string optionsType, string method, string diagnosticId)
         {
             var source =
-                $@"using NServiceBus; 
+                $@"using NServiceBus;
 class Foo
 {{
     void Bar({optionsType} options)
