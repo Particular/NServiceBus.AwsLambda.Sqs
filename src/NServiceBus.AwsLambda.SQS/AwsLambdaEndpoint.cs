@@ -404,27 +404,18 @@
                 catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
                 {
                     immediateProcessingAttempts++;
-                    ErrorHandleResult errorHandlerResult;
 
-                    try
-                    {
-                        var errorContext = new ErrorContext(
-                            ex,
-                            new Dictionary<string, string>(headers),
-                            nativeMessageId,
-                            body,
-                            transportTransaction,
-                            immediateProcessingAttempts,
-                            receiveQueueAddress,
-                            context);
+                    var errorContext = new ErrorContext(
+                        ex,
+                        new Dictionary<string, string>(headers),
+                        nativeMessageId,
+                        body,
+                        transportTransaction,
+                        immediateProcessingAttempts,
+                        receiveQueueAddress,
+                        context);
 
-                        errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext, cancellationToken).ConfigureAwait(false);
-                    }
-                    catch (Exception onErrorEx) when (!onErrorEx.IsCausedBy(cancellationToken))
-                    {
-                        Logger.Warn($"Failed to execute recoverability policy for message with native ID: `{nativeMessageId}`", onErrorEx);
-                        throw;
-                    }
+                    var errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext, nativeMessageId, cancellationToken).ConfigureAwait(false);
 
                     errorHandled = errorHandlerResult == ErrorHandleResult.Handled;
                 }
@@ -435,17 +426,26 @@
         {
             await InitializeEndpointIfNecessary(executionContext, cancellationToken)
                 .ConfigureAwait(false);
+
             await pipeline.PushMessage(messageContext, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        async Task<ErrorHandleResult> ProcessFailedMessage(ErrorContext errorContext, ILambdaContext executionContext, CancellationToken cancellationToken)
+        async Task<ErrorHandleResult> ProcessFailedMessage(ErrorContext errorContext, ILambdaContext executionContext, string nativeMessageId, CancellationToken cancellationToken)
         {
-            await InitializeEndpointIfNecessary(executionContext, cancellationToken)
-                .ConfigureAwait(false);
+            try
+            {
+                await InitializeEndpointIfNecessary(executionContext, cancellationToken)
+                    .ConfigureAwait(false);
 
-            return await pipeline.PushFailedMessage(errorContext, cancellationToken)
-                .ConfigureAwait(false);
+                return await pipeline.PushFailedMessage(errorContext, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception onErrorEx) when (!onErrorEx.IsCausedBy(cancellationToken))
+            {
+                Logger.Warn($"Failed to execute recoverability policy for message with native ID: `{nativeMessageId}`", onErrorEx);
+                throw;
+            }
         }
 
         async Task DeleteMessageAndBodyIfRequired(Message message, string messageS3BodyKey, CancellationToken cancellationToken)
