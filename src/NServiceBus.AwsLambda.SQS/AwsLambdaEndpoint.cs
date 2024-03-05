@@ -57,17 +57,17 @@
                 .ConfigureAwait(false);
         }
 
-        async Task InitializeEndpointIfNecessary(ILambdaContext executionContext, CancellationToken token = default)
+        async Task InitializeEndpointIfNecessary(ILambdaContext executionContext, CancellationToken cancellationToken)
         {
             if (pipeline == null)
             {
-                await semaphoreLock.WaitAsync(token)
+                await semaphoreLock.WaitAsync(cancellationToken)
                     .ConfigureAwait(false);
                 try
                 {
                     if (pipeline == null)
                     {
-                        var transportInfrastructure = await Initialize(executionContext, token).ConfigureAwait(false);
+                        var transportInfrastructure = await Initialize(executionContext, cancellationToken).ConfigureAwait(false);
 
                         pipeline = transportInfrastructure.PipelineInvoker;
                     }
@@ -79,7 +79,7 @@
             }
         }
 
-        async Task<ServerlessTransportInfrastructure> Initialize(ILambdaContext executionContext, CancellationToken token)
+        async Task<ServerlessTransportInfrastructure> Initialize(ILambdaContext executionContext, CancellationToken cancellationToken)
         {
             var configuration = configurationFactory(executionContext);
 
@@ -89,7 +89,7 @@
             var serverlessTransport = new ServerlessTransport(configuration.Transport);
             configuration.EndpointConfiguration.UseTransport(serverlessTransport);
 
-            endpoint = await Endpoint.Start(configuration.EndpointConfiguration, token).ConfigureAwait(false);
+            endpoint = await Endpoint.Start(configuration.EndpointConfiguration, cancellationToken).ConfigureAwait(false);
 
             var transportInfrastructure = serverlessTransport.GetTransportInfrastructure(endpoint);
             isSendOnly = transportInfrastructure.IsSendOnly;
@@ -97,139 +97,139 @@
             if (!isSendOnly)
             {
                 receiveQueueAddress = transportInfrastructure.PipelineInvoker.ReceiveAddress;
-                receiveQueueUrl = await GetQueueUrl(receiveQueueAddress).ConfigureAwait(false);
-                errorQueueUrl = await GetQueueUrl(transportInfrastructure.ErrorQueueAddress).ConfigureAwait(false);
+                receiveQueueUrl = await GetQueueUrl(receiveQueueAddress, cancellationToken).ConfigureAwait(false);
+                errorQueueUrl = await GetQueueUrl(transportInfrastructure.ErrorQueueAddress, cancellationToken).ConfigureAwait(false);
             }
 
             return transportInfrastructure;
         }
 
         /// <inheritdoc />
-        public async Task Send(object message, SendOptions options, ILambdaContext lambdaContext)
+        public async Task Send(object message, SendOptions options, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
         {
-            await InitializeEndpointIfNecessary(lambdaContext).ConfigureAwait(false);
+            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken).ConfigureAwait(false);
 
-            await endpoint.Send(message, options).ConfigureAwait(false);
+            await endpoint.Send(message, options, cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public Task Send(object message, ILambdaContext lambdaContext)
-            => Send(message, new SendOptions(), lambdaContext);
+        public Task Send(object message, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
+            => Send(message, new SendOptions(), lambdaContext, cancellationToken);
 
         /// <inheritdoc />
-        public async Task Send<T>(Action<T> messageConstructor, SendOptions options, ILambdaContext lambdaContext)
+        public async Task Send<T>(Action<T> messageConstructor, SendOptions options, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
         {
-            await InitializeEndpointIfNecessary(lambdaContext)
+            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Send(messageConstructor, options)
-                .ConfigureAwait(false);
-        }
-
-        /// <inheritdoc />
-        public async Task Send<T>(Action<T> messageConstructor, ILambdaContext lambdaContext)
-        {
-            await InitializeEndpointIfNecessary(lambdaContext)
-                .ConfigureAwait(false);
-
-            await Send(messageConstructor, new SendOptions(), lambdaContext)
+            await endpoint.Send(messageConstructor, options, cancellationToken)
                 .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public async Task Publish(object message, PublishOptions options, ILambdaContext lambdaContext)
+        public async Task Send<T>(Action<T> messageConstructor, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
         {
-            await InitializeEndpointIfNecessary(lambdaContext)
+            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Publish(message, options)
+            await Send(messageConstructor, new SendOptions(), lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public async Task Publish<T>(Action<T> messageConstructor, PublishOptions options, ILambdaContext lambdaContext)
+        public async Task Publish(object message, PublishOptions options, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
         {
-            await InitializeEndpointIfNecessary(lambdaContext)
+            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Publish(messageConstructor, options)
+            await endpoint.Publish(message, options, cancellationToken)
                 .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public async Task Publish(object message, ILambdaContext lambdaContext)
+        public async Task Publish<T>(Action<T> messageConstructor, PublishOptions options, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
         {
-            await InitializeEndpointIfNecessary(lambdaContext)
+            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Publish(message)
+            await endpoint.Publish(messageConstructor, options, cancellationToken)
                 .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public async Task Publish<T>(Action<T> messageConstructor, ILambdaContext lambdaContext)
+        public async Task Publish(object message, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
         {
-            await InitializeEndpointIfNecessary(lambdaContext)
+            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Publish(messageConstructor)
+            await endpoint.Publish(message, cancellationToken)
                 .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public async Task Subscribe(Type eventType, SubscribeOptions options, ILambdaContext lambdaContext)
+        public async Task Publish<T>(Action<T> messageConstructor, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
         {
-            await InitializeEndpointIfNecessary(lambdaContext)
+            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Subscribe(eventType, options)
+            await endpoint.Publish(messageConstructor, cancellationToken)
                 .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public async Task Subscribe(Type eventType, ILambdaContext lambdaContext)
+        public async Task Subscribe(Type eventType, SubscribeOptions options, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
         {
-            await InitializeEndpointIfNecessary(lambdaContext)
+            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Subscribe(eventType)
+            await endpoint.Subscribe(eventType, options, cancellationToken)
                 .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public async Task Unsubscribe(Type eventType, UnsubscribeOptions options, ILambdaContext lambdaContext)
+        public async Task Subscribe(Type eventType, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
         {
-            await InitializeEndpointIfNecessary(lambdaContext)
+            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Unsubscribe(eventType, options)
+            await endpoint.Subscribe(eventType, cancellationToken)
                 .ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public async Task Unsubscribe(Type eventType, ILambdaContext lambdaContext)
+        public async Task Unsubscribe(Type eventType, UnsubscribeOptions options, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
         {
-            await InitializeEndpointIfNecessary(lambdaContext)
+            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Unsubscribe(eventType)
+            await endpoint.Unsubscribe(eventType, options, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        async Task<string> GetQueueUrl(string queueName)
+        /// <inheritdoc />
+        public async Task Unsubscribe(Type eventType, ILambdaContext lambdaContext, CancellationToken cancellationToken = default)
+        {
+            await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
+                .ConfigureAwait(false);
+
+            await endpoint.Unsubscribe(eventType, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        async Task<string> GetQueueUrl(string queueName, CancellationToken cancellationToken)
         {
             try
             {
-                return (await sqsClient.GetQueueUrlAsync(queueName).ConfigureAwait(false)).QueueUrl;
+                return (await sqsClient.GetQueueUrlAsync(queueName, cancellationToken).ConfigureAwait(false)).QueueUrl;
             }
-            catch (Exception e)
+            catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
             {
-                Logger.Error($"Failed to obtain the queue URL for queue {queueName} (derived from configured name {queueName}).", e);
+                Logger.Error($"Failed to obtain the queue URL for queue {queueName} (derived from configured name {queueName}).", ex);
                 throw;
             }
         }
 
-        async Task ProcessMessage(SQSEvent.SQSMessage receivedLambdaMessage, ILambdaContext lambdaContext, CancellationToken token)
+        async Task ProcessMessage(SQSEvent.SQSMessage receivedLambdaMessage, ILambdaContext lambdaContext, CancellationToken cancellationToken)
         {
             var arrayPool = ArrayPool<byte>.Shared;
             ReadOnlyMemory<byte> messageBody = null;
@@ -258,7 +258,7 @@
                     {
                         transportMessage = new TransportMessage
                         {
-                            Headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersAttribute.StringValue) ?? new Dictionary<string, string>(),
+                            Headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersAttribute.StringValue) ?? [],
                             Body = receivedMessage.Body
                         };
                         transportMessage.Headers[Headers.MessageId] = messageId;
@@ -303,9 +303,9 @@
                         }
                     }
 
-                    (messageBody, messageBodyBuffer) = await transportMessage.RetrieveBody(messageId, s3Settings, arrayPool, token).ConfigureAwait(false);
+                    (messageBody, messageBodyBuffer) = await transportMessage.RetrieveBody(messageId, s3Settings, arrayPool, cancellationToken).ConfigureAwait(false);
                 }
-                catch (Exception ex) when (!ex.IsCausedBy(token))
+                catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
                 {
                     // Can't deserialize. This is a poison message
                     exception = ex;
@@ -316,20 +316,20 @@
                 {
                     LogPoisonMessage(messageId, exception);
 
-                    await MovePoisonMessageToErrorQueue(receivedMessage, token).ConfigureAwait(false);
+                    await MovePoisonMessageToErrorQueue(receivedMessage, cancellationToken).ConfigureAwait(false);
                     return;
                 }
 
                 if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, sqsClient.Config.ClockOffset))
                 {
                     // here we also want to use the native message id because the core demands it like that
-                    await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, receivedMessage, receivedLambdaMessage, lambdaContext, token).ConfigureAwait(false);
+                    await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, receivedMessage, receivedLambdaMessage, lambdaContext, cancellationToken).ConfigureAwait(false);
                 }
 
                 // Always delete the message from the queue.
                 // If processing failed, the onError handler will have moved the message
                 // to a retry queue.
-                await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey).ConfigureAwait(false);
+                await DeleteMessageAndBodyIfRequired(receivedMessage, transportMessage.S3BodyKey, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -367,7 +367,7 @@
             return true;
         }
 
-        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, ReadOnlyMemory<byte> body, Message nativeMessage, SQSEvent.SQSMessage nativeLambdaMessage, ILambdaContext lambdaContext, CancellationToken token)
+        async Task ProcessMessageWithInMemoryRetries(Dictionary<string, string> headers, string nativeMessageId, ReadOnlyMemory<byte> body, Message nativeMessage, SQSEvent.SQSMessage nativeLambdaMessage, ILambdaContext lambdaContext, CancellationToken cancellationToken)
         {
             var immediateProcessingAttempts = 0;
             var errorHandled = false;
@@ -387,7 +387,7 @@
 
                 try
                 {
-                    token.ThrowIfCancellationRequested();
+                    cancellationToken.ThrowIfCancellationRequested();
 
                     var messageContext = new MessageContext(
                         nativeMessageId,
@@ -397,35 +397,25 @@
                         receiveQueueAddress,
                         context);
 
-                    await Process(messageContext, lambdaContext, token).ConfigureAwait(false);
+                    await Process(messageContext, lambdaContext, cancellationToken).ConfigureAwait(false);
 
                     return;
                 }
-                catch (Exception ex)
-                    when (!(ex is OperationCanceledException && token.IsCancellationRequested))
+                catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
                 {
                     immediateProcessingAttempts++;
-                    ErrorHandleResult errorHandlerResult;
 
-                    try
-                    {
-                        var errorContext = new ErrorContext(
-                            ex,
-                            new Dictionary<string, string>(headers),
-                            nativeMessageId,
-                            body,
-                            transportTransaction,
-                            immediateProcessingAttempts,
-                            receiveQueueAddress,
-                            context);
+                    var errorContext = new ErrorContext(
+                        ex,
+                        new Dictionary<string, string>(headers),
+                        nativeMessageId,
+                        body,
+                        transportTransaction,
+                        immediateProcessingAttempts,
+                        receiveQueueAddress,
+                        context);
 
-                        errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext).ConfigureAwait(false);
-                    }
-                    catch (Exception onErrorEx)
-                    {
-                        Logger.Warn($"Failed to execute recoverability policy for message with native ID: `{nativeMessageId}`", onErrorEx);
-                        throw;
-                    }
+                    var errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext, nativeMessageId, cancellationToken).ConfigureAwait(false);
 
                     errorHandled = errorHandlerResult == ErrorHandleResult.Handled;
                 }
@@ -436,20 +426,29 @@
         {
             await InitializeEndpointIfNecessary(executionContext, cancellationToken)
                 .ConfigureAwait(false);
-            await pipeline.PushMessage(messageContext)
+
+            await pipeline.PushMessage(messageContext, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        async Task<ErrorHandleResult> ProcessFailedMessage(ErrorContext errorContext, ILambdaContext executionContext)
+        async Task<ErrorHandleResult> ProcessFailedMessage(ErrorContext errorContext, ILambdaContext executionContext, string nativeMessageId, CancellationToken cancellationToken)
         {
-            await InitializeEndpointIfNecessary(executionContext)
-                .ConfigureAwait(false);
+            try
+            {
+                await InitializeEndpointIfNecessary(executionContext, cancellationToken)
+                    .ConfigureAwait(false);
 
-            return await pipeline.PushFailedMessage(errorContext)
-                .ConfigureAwait(false);
+                return await pipeline.PushFailedMessage(errorContext, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception onErrorEx) when (!onErrorEx.IsCausedBy(cancellationToken))
+            {
+                Logger.Warn($"Failed to execute recoverability policy for message with native ID: `{nativeMessageId}`", onErrorEx);
+                throw;
+            }
         }
 
-        async Task DeleteMessageAndBodyIfRequired(Message message, string messageS3BodyKey)
+        async Task DeleteMessageAndBodyIfRequired(Message message, string messageS3BodyKey, CancellationToken cancellationToken)
         {
             try
             {
@@ -488,7 +487,7 @@
                 // and can't be re-sent. Unfortunately all the SQS metadata
                 // such as SentTimestamp is reset with this send.
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
             {
                 Logger.Error($"Error moving poison message to error queue at url {errorQueueUrl}. Moving back to input queue.", ex);
                 try

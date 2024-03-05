@@ -1,11 +1,11 @@
 ﻿namespace NServiceBus.AcceptanceTests
 {
-    using NUnit.Framework;
-    using System.Text.Json;
-    using System.Threading.Tasks;
     using System;
     using System.Linq;
+    using System.Text.Json;
     using System.Threading;
+    using System.Threading.Tasks;
+    using NUnit.Framework;
 
     class When_message_fails_processing : AwsLambdaSQSEndpointTestBase
     {
@@ -20,7 +20,6 @@
 
             Assert.DoesNotThrowAsync(() => endpoint.Process(receivedMessages, null), "message should be moved to the error queue instead");
 
-            Assert.AreEqual(6, context.HandlerInvocationCount, "should immediately retry message before moving it to the error queue");
             var errorMessages = await RetrieveMessagesInErrorQueue();
             Assert.AreEqual(1, errorMessages.Records.Count);
             JsonDocument errorMessage = JsonSerializer.Deserialize<JsonDocument>(errorMessages.Records.First().Body);
@@ -49,7 +48,6 @@
             StringAssert.Contains("Failed to process message", exception.Message);
             Assert.AreEqual("simulated exception", exception.InnerException.Message);
             Assert.AreEqual(0, await CountMessagesInErrorQueue());
-            Assert.AreEqual(6, context.HandlerInvocationCount, "should immediately retry message before moving it to the error queue");
         }
 
         public class TestContext

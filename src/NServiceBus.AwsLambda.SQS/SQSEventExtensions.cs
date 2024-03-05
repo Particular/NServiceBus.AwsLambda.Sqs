@@ -1,7 +1,6 @@
 ﻿namespace NServiceBus.AwsLambda.SQS
 {
     using System.Collections.Generic;
-    using System.IO;
     using Amazon.SQS.Model;
     using static Amazon.Lambda.SQSEvents.SQSEvent;
 
@@ -48,8 +47,8 @@
             target.BinaryValue = source.BinaryValue ?? target.BinaryValue;
 
             // The SQS client returns empty lists instead of null
-            target.StringListValues = source.StringListValues ?? new List<string>(0);
-            target.BinaryListValues = source.BinaryListValues ?? new List<MemoryStream>(0);
+            target.StringListValues = source.StringListValues ?? [];
+            target.BinaryListValues = source.BinaryListValues ?? [];
 
             return target;
         }

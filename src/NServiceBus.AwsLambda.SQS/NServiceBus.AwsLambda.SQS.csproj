@@ -1,20 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+    <TargetFramework>net8.0</TargetFramework>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\NServiceBus.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\NServiceBus.AwsLambda.SQS.Analyzer\bin\$(Configuration)\$(AnalyzerTargetFramework)\NServiceBus.AwsLambda.SQS.Analyzer.dll" Pack="true" PackagePath="analyzers/dotnet/cs/NServiceBus.AwsLambda.SQS.Analyzer.dll" Link="NServiceBus.AwsLambda.SQS.Analyzer.dll" Visible="false" />
+    <ProjectReference Include="..\NServiceBus.AwsLambda.SQS.Analyzer\NServiceBus.AwsLambda.SQS.Analyzer.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
-  
+
   <ItemGroup>
-    <PackageReference Include="Amazon.Lambda.Core" Version="[2.1.0, 3.0.0)" />
-    <PackageReference Include="Amazon.Lambda.SQSEvents" Version="[2.1.0, 3.0.0)" />
-    <PackageReference Include="NServiceBus.AmazonSQS" Version="[6.1.1, 7.0.0)" />
-    <PackageReference Include="Particular.Packaging" Version="3.0.0" PrivateAssets="All" />
+    <PackageReference Include="Amazon.Lambda.Core" Version="[2.2.0, 3.0.0)" />
+    <PackageReference Include="Amazon.Lambda.SQSEvents" Version="[2.2.0, 3.0.0)" />
+    <PackageReference Include="NServiceBus.AmazonSQS" Version="[7.0.0, 8.0.0)" />
+    <PackageReference Include="Particular.Packaging" Version="4.1.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\NServiceBus.AwsLambda.SQS.Analyzer\bin\$(Configuration)\$(AnalyzerTargetFramework)\NServiceBus.AwsLambda.SQS.Analyzer.dll" Pack="true" PackagePath="analyzers/dotnet/roslyn4.8/cs/NServiceBus.AwsLambda.SQS.Analyzer.dll" Visible="false" />
   </ItemGroup>
 
 </Project>

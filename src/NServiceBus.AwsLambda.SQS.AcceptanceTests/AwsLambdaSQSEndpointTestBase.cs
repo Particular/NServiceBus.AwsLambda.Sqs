@@ -15,7 +15,6 @@
     using Amazon.SQS;
     using Amazon.SQS.Model;
     using Microsoft.Extensions.DependencyInjection;
-    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
     using NUnit.Framework;
 
     [TestFixture]
@@ -40,7 +39,7 @@
         [SetUp]
         public async Task Setup()
         {
-            queueNames = new List<string>();
+            queueNames = [];
 
             Prefix = Path.GetFileNameWithoutExtension(Path.GetRandomFileName()).ToLowerInvariant();
 
@@ -103,14 +102,14 @@
             }
         }
 
-        protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration<TTestContext>(TTestContext testContext)
+        protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration<TTestContext>(TTestContext testContext, bool useXmlSerializer = false)
         {
-            var configuration = DefaultLambdaEndpointConfiguration();
+            var configuration = DefaultLambdaEndpointConfiguration(useXmlSerializer);
             configuration.AdvancedConfiguration.RegisterComponents(c => c.AddSingleton(typeof(TTestContext), testContext));
             return configuration;
         }
 
-        protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration()
+        protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration(bool useXmlSerializer = false)
         {
             var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
             configuration.Transport.QueueNamePrefix = Prefix;
@@ -118,7 +117,20 @@
             configuration.Transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
 
             var advanced = configuration.AdvancedConfiguration;
-            advanced.SendFailedMessagesTo(ErrorQueueAddress);
+
+            if (useXmlSerializer)
+            {
+                advanced.UseSerialization<XmlSerializer>();
+            }
+            else
+            {
+                advanced.UseSerialization<SystemJsonSerializer>();
+            }
+
+            var recoverability = advanced.Recoverability();
+
+            recoverability.Immediate(i => i.NumberOfRetries(0));
+            recoverability.Delayed(d => d.NumberOfRetries(0));
 
             return configuration;
         }
@@ -138,6 +150,7 @@
                 S3 = new S3Settings(BucketName, Prefix, CreateS3Client())
             };
 
+            endpointConfiguration.UseSerialization<SystemJsonSerializer>();
             endpointConfiguration.UseTransport(transport);
 
             var endpointInstance = await Endpoint.Start(endpointConfiguration)
@@ -156,8 +169,8 @@
             {
                 MaxNumberOfMessages = count,
                 WaitTimeSeconds = 20,
-                AttributeNames = new List<string> { "SentTimestamp" },
-                MessageAttributeNames = new List<string> { "*" }
+                AttributeNames = ["SentTimestamp"],
+                MessageAttributeNames = ["*"]
             };
 
             var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);
@@ -183,8 +196,8 @@
             {
                 MaxNumberOfMessages = 10,
                 WaitTimeSeconds = 20,
-                AttributeNames = new List<string> { "SentTimestamp" },
-                MessageAttributeNames = new List<string> { "*" }
+                AttributeNames = ["SentTimestamp"],
+                MessageAttributeNames = ["*"]
             };
 
             var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);
@@ -214,8 +227,8 @@
             {
                 MaxNumberOfMessages = maxMessageCount,
                 WaitTimeSeconds = 20,
-                AttributeNames = new List<string> { "SentTimestamp" },
-                MessageAttributeNames = new List<string> { "*" }
+                AttributeNames = ["SentTimestamp"],
+                MessageAttributeNames = ["*"]
             };
 
             var receivedMessages = await sqsClient.ReceiveMessageAsync(receiveRequest);

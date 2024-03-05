@@ -5,7 +5,6 @@
     using Amazon.SimpleNotificationService;
     using Amazon.SQS;
     using AwsLambda.SQS;
-
     using NServiceBus.Logging;
     using Serialization;
 
@@ -37,10 +36,7 @@
 
             recoverabilityPolicy.SendFailedMessagesToErrorQueue = true;
 
-            // delayed delivery is disabled by default as the required FIFO queue might not exist
-            EndpointConfiguration.Recoverability()
-                .Delayed(c => c.NumberOfRetries(0))
-                .CustomPolicy(recoverabilityPolicy.Invoke);
+            EndpointConfiguration.Recoverability().CustomPolicy(recoverabilityPolicy.Invoke);
 
             if (sqsClient is null && snsClient is null)
             {
