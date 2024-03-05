@@ -6,7 +6,7 @@
     using NServiceBus;
     using Transport;
 
-    sealed partial class ServerlessTransport : TransportDefinition
+    sealed class ServerlessTransport : TransportDefinition
     {
         ServerlessTransportInfrastructure serverlessTransportInfrastructure;
 
