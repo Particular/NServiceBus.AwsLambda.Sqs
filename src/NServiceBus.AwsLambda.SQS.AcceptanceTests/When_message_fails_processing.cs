@@ -1,11 +1,11 @@
 ﻿namespace NServiceBus.AcceptanceTests
 {
-    using NUnit.Framework;
-    using System.Text.Json;
-    using System.Threading.Tasks;
     using System;
     using System.Linq;
+    using System.Text.Json;
     using System.Threading;
+    using System.Threading.Tasks;
+    using NUnit.Framework;
 
     class When_message_fails_processing : AwsLambdaSQSEndpointTestBase
     {
@@ -45,7 +45,8 @@
 
             var exception = Assert.ThrowsAsync<Exception>(() => endpoint.Process(receivedMessages, null));
 
-            Assert.AreEqual("simulated exception", exception.Message);
+            StringAssert.Contains("Failed to process message", exception.Message);
+            Assert.AreEqual("simulated exception", exception.InnerException.Message);
             Assert.AreEqual(0, await CountMessagesInErrorQueue());
         }
 
