@@ -407,25 +407,17 @@
                     immediateProcessingAttempts++;
                     ErrorHandleResult errorHandlerResult;
 
-                    try
-                    {
-                        var errorContext = new ErrorContext(
-                            ex,
-                            new Dictionary<string, string>(headers),
-                            nativeMessageId,
-                            body,
-                            transportTransaction,
-                            immediateProcessingAttempts,
-                            receiveQueueAddress,
-                            context);
+                    var errorContext = new ErrorContext(
+                        ex,
+                        new Dictionary<string, string>(headers),
+                        nativeMessageId,
+                        body,
+                        transportTransaction,
+                        immediateProcessingAttempts,
+                        receiveQueueAddress,
+                        context);
 
-                        errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext).ConfigureAwait(false);
-                    }
-                    catch (Exception onErrorEx)
-                    {
-                        Logger.Warn($"Failed to execute recoverability policy for message with native ID: `{nativeMessageId}`", onErrorEx);
-                        throw;
-                    }
+                    errorHandlerResult = await ProcessFailedMessage(errorContext, lambdaContext, nativeMessageId).ConfigureAwait(false);
 
                     errorHandled = errorHandlerResult == ErrorHandleResult.Handled;
                 }
@@ -440,13 +432,21 @@
                 .ConfigureAwait(false);
         }
 
-        async Task<ErrorHandleResult> ProcessFailedMessage(ErrorContext errorContext, ILambdaContext executionContext)
+        async Task<ErrorHandleResult> ProcessFailedMessage(ErrorContext errorContext, ILambdaContext executionContext, string nativeMessageId)
         {
-            await InitializeEndpointIfNecessary(executionContext)
-                .ConfigureAwait(false);
+            try
+            {
+                await InitializeEndpointIfNecessary(executionContext)
+                    .ConfigureAwait(false);
 
-            return await pipeline.PushFailedMessage(errorContext)
-                .ConfigureAwait(false);
+                return await pipeline.PushFailedMessage(errorContext)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception onErrorEx)
+            {
+                Logger.Warn($"Failed to execute recoverability policy for message with native ID: `{nativeMessageId}`", onErrorEx);
+                throw;
+            }
         }
 
         async Task DeleteMessageAndBodyIfRequired(Message message, string messageS3BodyKey)
