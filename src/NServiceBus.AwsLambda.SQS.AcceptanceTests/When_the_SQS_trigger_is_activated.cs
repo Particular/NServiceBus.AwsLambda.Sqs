@@ -21,11 +21,11 @@
 
             await endpoint.Process(receivedMessages, null);
 
-            Assert.AreEqual(receivedMessages.Records.Count, context.HandlerInvokationCount);
+            Assert.That(context.HandlerInvokationCount, Is.EqualTo(receivedMessages.Records.Count));
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(0, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -39,10 +39,13 @@
 
             await endpoint.Process(receivedMessages, null);
 
-            Assert.IsNotNull(context.NativeMessage, "SQS native message not found");
-            Assert.IsNotNull(context.LambdaNativeMessage, "Lambda native message not found");
-            Assert.That(receivedMessages.Records.Any(r => r.MessageId == context.NativeMessage.MessageId));
-            Assert.That(receivedMessages.Records.Any(r => r.MessageId == context.LambdaNativeMessage.MessageId));
+            Assert.Multiple(() =>
+            {
+                Assert.That(context.NativeMessage, Is.Not.Null, "SQS native message not found");
+                Assert.That(context.LambdaNativeMessage, Is.Not.Null, "Lambda native message not found");
+                Assert.That(receivedMessages.Records.Any(r => r.MessageId == context.NativeMessage.MessageId));
+                Assert.That(receivedMessages.Records.Any(r => r.MessageId == context.LambdaNativeMessage.MessageId));
+            });
         }
 
         public class TestContext

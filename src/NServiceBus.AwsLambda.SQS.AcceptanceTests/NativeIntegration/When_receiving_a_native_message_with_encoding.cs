@@ -28,11 +28,11 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             await endpoint.Process(receivedMessages, null);
 
-            Assert.AreEqual("Hello!", context.MessageReceived);
+            Assert.That(context.MessageReceived, Is.EqualTo("Hello!"));
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(0, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -54,7 +54,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(1, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(1));
         }
 
         [Test]
@@ -79,14 +79,17 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
             await endpoint.Process(receivedMessages, null);
             var poisonMessages = await RetrieveMessagesInErrorQueue();
 
-            Assert.AreEqual(1, poisonMessages.Records.Count);
+            Assert.That(poisonMessages.Records, Has.Count.EqualTo(1));
             var message = poisonMessages.Records[0];
 
-            Assert.IsNotNull(message);
-            Assert.That(message.MessageAttributes.ContainsKey(Headers.MessageId), "Message ID message attribute is missing.");
-            Assert.That(message.MessageAttributes.ContainsKey("S3BodyKey"), "S3BodyKey message attribute is missing.");
-            Assert.That(message.MessageAttributes.ContainsKey("MessageTypeFullName"), "MessageTypeFullName message attribute is missing.");
-            Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+            Assert.That(message, Is.Not.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(message.MessageAttributes.ContainsKey(Headers.MessageId), "Message ID message attribute is missing.");
+                Assert.That(message.MessageAttributes.ContainsKey("S3BodyKey"), "S3BodyKey message attribute is missing.");
+                Assert.That(message.MessageAttributes.ContainsKey("MessageTypeFullName"), "MessageTypeFullName message attribute is missing.");
+                Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+            });
         }
 
         [Test]
@@ -109,14 +112,20 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
             var poisonMessages = await RetrieveMessagesInErrorQueue();
             var message = poisonMessages.Records[0];
 
-            Assert.AreEqual(1, poisonMessages.Records.Count);
-            Assert.IsNotNull(message);
+            Assert.Multiple(() =>
+            {
+                Assert.That(poisonMessages.Records, Has.Count.EqualTo(1));
+                Assert.That(message, Is.Not.Null);
+            });
 
             var messageNode = JsonNode.Parse(message.Body);
 
-            Assert.AreEqual(messageId.ToString(), messageNode["Headers"]["NServiceBus.MessageId"].GetValue<string>());
-            Assert.AreEqual(messageType, messageNode["Headers"]["NServiceBus.EnclosedMessageTypes"].GetValue<string>());
-            Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+            Assert.Multiple(() =>
+            {
+                Assert.That(messageNode["Headers"]["NServiceBus.MessageId"].GetValue<string>(), Is.EqualTo(messageId.ToString()));
+                Assert.That(messageNode["Headers"]["NServiceBus.EnclosedMessageTypes"].GetValue<string>(), Is.EqualTo(messageType));
+                Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+            });
         }
 
         [Test]
@@ -138,11 +147,11 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             await endpoint.Process(receivedMessages, null);
 
-            Assert.AreEqual("Hello!", context.MessageReceived);
+            Assert.That(context.MessageReceived, Is.EqualTo("Hello!"));
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(0, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(0));
         }
 
         public class TestContext

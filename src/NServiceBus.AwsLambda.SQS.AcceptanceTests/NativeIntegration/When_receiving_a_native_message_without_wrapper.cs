@@ -34,11 +34,11 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             await endpoint.Process(receivedMessages, null);
 
-            Assert.AreEqual("Hello!", context.MessageReceived);
+            Assert.That(context.MessageReceived, Is.EqualTo("Hello!"));
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(0, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -61,11 +61,11 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             await endpoint.Process(receivedMessages, null);
 
-            Assert.AreEqual("Hello!", context.MessageReceived);
+            Assert.That(context.MessageReceived, Is.EqualTo("Hello!"));
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(0, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -92,11 +92,11 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             await endpoint.Process(receivedMessages, null);
 
-            Assert.AreEqual("Hello!", context.MessageReceived);
+            Assert.That(context.MessageReceived, Is.EqualTo("Hello!"));
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(0, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -131,16 +131,19 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(1, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(1));
 
             var errorMessages = await RetrieveMessagesInErrorQueue();
 
             var message = errorMessages?.Records[0];
 
-            Assert.NotNull(message);
-            Assert.That(message.MessageAttributes.ContainsKey("NServiceBus.AmazonSQS.Headers"), $"NServiceBus.AmazonSQS.Headers message attribute is missing.");
-            Assert.That(message.MessageAttributes.ContainsKey("S3BodyKey"), "S3BodyKey message attribute is missing.");
-            Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+            Assert.That(message, Is.Not.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(message.MessageAttributes.ContainsKey("NServiceBus.AmazonSQS.Headers"), $"NServiceBus.AmazonSQS.Headers message attribute is missing.");
+                Assert.That(message.MessageAttributes.ContainsKey("S3BodyKey"), "S3BodyKey message attribute is missing.");
+                Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+            });
         }
 
         [Test]
@@ -174,7 +177,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(1, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(1));
 
             var errorMessages = await RetrieveMessagesInErrorQueue();
 
