@@ -39,10 +39,13 @@
 
             await endpoint.Process(receivedMessages, null);
 
-            Assert.That(context.NativeMessage, Is.Not.Null, "SQS native message not found");
-            Assert.That(context.LambdaNativeMessage, Is.Not.Null, "Lambda native message not found");
-            Assert.That(receivedMessages.Records.Any(r => r.MessageId == context.NativeMessage.MessageId));
-            Assert.That(receivedMessages.Records.Any(r => r.MessageId == context.LambdaNativeMessage.MessageId));
+            Assert.Multiple(() =>
+            {
+                Assert.That(context.NativeMessage, Is.Not.Null, "SQS native message not found");
+                Assert.That(context.LambdaNativeMessage, Is.Not.Null, "Lambda native message not found");
+                Assert.That(receivedMessages.Records.Any(r => r.MessageId == context.NativeMessage.MessageId));
+                Assert.That(receivedMessages.Records.Any(r => r.MessageId == context.LambdaNativeMessage.MessageId));
+            });
         }
 
         public class TestContext

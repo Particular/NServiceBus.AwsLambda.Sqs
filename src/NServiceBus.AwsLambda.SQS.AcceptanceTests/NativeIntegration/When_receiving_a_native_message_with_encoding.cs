@@ -83,10 +83,13 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
             var message = poisonMessages.Records[0];
 
             Assert.That(message, Is.Not.Null);
-            Assert.That(message.MessageAttributes.ContainsKey(Headers.MessageId), "Message ID message attribute is missing.");
-            Assert.That(message.MessageAttributes.ContainsKey("S3BodyKey"), "S3BodyKey message attribute is missing.");
-            Assert.That(message.MessageAttributes.ContainsKey("MessageTypeFullName"), "MessageTypeFullName message attribute is missing.");
-            Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+            Assert.Multiple(() =>
+            {
+                Assert.That(message.MessageAttributes.ContainsKey(Headers.MessageId), "Message ID message attribute is missing.");
+                Assert.That(message.MessageAttributes.ContainsKey("S3BodyKey"), "S3BodyKey message attribute is missing.");
+                Assert.That(message.MessageAttributes.ContainsKey("MessageTypeFullName"), "MessageTypeFullName message attribute is missing.");
+                Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+            });
         }
 
         [Test]
@@ -109,14 +112,20 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
             var poisonMessages = await RetrieveMessagesInErrorQueue();
             var message = poisonMessages.Records[0];
 
-            Assert.That(poisonMessages.Records.Count, Is.EqualTo(1));
-            Assert.That(message, Is.Not.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(poisonMessages.Records.Count, Is.EqualTo(1));
+                Assert.That(message, Is.Not.Null);
+            });
 
             var messageNode = JsonNode.Parse(message.Body);
 
-            Assert.That(messageNode["Headers"]["NServiceBus.MessageId"].GetValue<string>(), Is.EqualTo(messageId.ToString()));
-            Assert.That(messageNode["Headers"]["NServiceBus.EnclosedMessageTypes"].GetValue<string>(), Is.EqualTo(messageType));
-            Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+            Assert.Multiple(() =>
+            {
+                Assert.That(messageNode["Headers"]["NServiceBus.MessageId"].GetValue<string>(), Is.EqualTo(messageId.ToString()));
+                Assert.That(messageNode["Headers"]["NServiceBus.EnclosedMessageTypes"].GetValue<string>(), Is.EqualTo(messageType));
+                Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+            });
         }
 
         [Test]

@@ -138,9 +138,12 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
             var message = errorMessages?.Records[0];
 
             Assert.That(message, Is.Not.Null);
-            Assert.That(message.MessageAttributes.ContainsKey("NServiceBus.AmazonSQS.Headers"), $"NServiceBus.AmazonSQS.Headers message attribute is missing.");
-            Assert.That(message.MessageAttributes.ContainsKey("S3BodyKey"), "S3BodyKey message attribute is missing.");
-            Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+            Assert.Multiple(() =>
+            {
+                Assert.That(message.MessageAttributes.ContainsKey("NServiceBus.AmazonSQS.Headers"), $"NServiceBus.AmazonSQS.Headers message attribute is missing.");
+                Assert.That(message.MessageAttributes.ContainsKey("S3BodyKey"), "S3BodyKey message attribute is missing.");
+                Assert.That(message.MessageAttributes.ContainsKey("CustomAttribute"), "CustomAttribute message attribute is missing.");
+            });
         }
 
         [Test]
