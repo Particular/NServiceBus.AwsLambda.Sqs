@@ -82,7 +82,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
             Assert.That(poisonMessages.Records.Count, Is.EqualTo(1));
             var message = poisonMessages.Records[0];
 
-            Assert.IsNotNull(message);
+            Assert.That(message, Is.Not.Null);
             Assert.That(message.MessageAttributes.ContainsKey(Headers.MessageId), "Message ID message attribute is missing.");
             Assert.That(message.MessageAttributes.ContainsKey("S3BodyKey"), "S3BodyKey message attribute is missing.");
             Assert.That(message.MessageAttributes.ContainsKey("MessageTypeFullName"), "MessageTypeFullName message attribute is missing.");
@@ -110,7 +110,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
             var message = poisonMessages.Records[0];
 
             Assert.That(poisonMessages.Records.Count, Is.EqualTo(1));
-            Assert.IsNotNull(message);
+            Assert.That(message, Is.Not.Null);
 
             var messageNode = JsonNode.Parse(message.Body);
 
