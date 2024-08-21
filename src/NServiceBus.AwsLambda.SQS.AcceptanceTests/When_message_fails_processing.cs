@@ -21,7 +21,7 @@
             Assert.DoesNotThrowAsync(() => endpoint.Process(receivedMessages, null), "message should be moved to the error queue instead");
 
             var errorMessages = await RetrieveMessagesInErrorQueue();
-            Assert.That(errorMessages.Records.Count, Is.EqualTo(1));
+            Assert.That(errorMessages.Records, Has.Count.EqualTo(1));
             JsonDocument errorMessage = JsonSerializer.Deserialize<JsonDocument>(errorMessages.Records.First().Body);
             var errorMessageHeader = errorMessage.RootElement.GetProperty("Headers");
             Assert.Multiple(() =>

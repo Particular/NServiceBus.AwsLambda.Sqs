@@ -79,7 +79,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
             await endpoint.Process(receivedMessages, null);
             var poisonMessages = await RetrieveMessagesInErrorQueue();
 
-            Assert.That(poisonMessages.Records.Count, Is.EqualTo(1));
+            Assert.That(poisonMessages.Records, Has.Count.EqualTo(1));
             var message = poisonMessages.Records[0];
 
             Assert.That(message, Is.Not.Null);
@@ -114,7 +114,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             Assert.Multiple(() =>
             {
-                Assert.That(poisonMessages.Records.Count, Is.EqualTo(1));
+                Assert.That(poisonMessages.Records, Has.Count.EqualTo(1));
                 Assert.That(message, Is.Not.Null);
             });
 
