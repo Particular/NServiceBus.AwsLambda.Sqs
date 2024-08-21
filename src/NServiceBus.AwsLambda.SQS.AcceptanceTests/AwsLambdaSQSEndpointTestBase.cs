@@ -100,6 +100,9 @@
                     }))
                 });
             }
+
+            s3Client.Dispose();
+            sqsClient.Dispose();
         }
 
         protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration<TTestContext>(TTestContext testContext, bool useXmlSerializer = false)
