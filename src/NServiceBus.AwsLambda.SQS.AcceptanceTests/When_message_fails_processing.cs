@@ -48,7 +48,7 @@
 
             var exception = Assert.ThrowsAsync<Exception>(() => endpoint.Process(receivedMessages, null));
 
-            StringAssert.Contains("Failed to process message", exception.Message);
+            Assert.That(exception.Message, Does.Contain("Failed to process message"));
             Assert.Multiple(async () =>
             {
                 Assert.That(exception.InnerException.Message, Is.EqualTo("simulated exception"));
