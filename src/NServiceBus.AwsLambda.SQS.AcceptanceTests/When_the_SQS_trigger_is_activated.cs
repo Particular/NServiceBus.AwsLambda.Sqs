@@ -21,11 +21,11 @@
 
             await endpoint.Process(receivedMessages, null);
 
-            Assert.AreEqual(receivedMessages.Records.Count, context.HandlerInvokationCount);
+            Assert.That(context.HandlerInvokationCount, Is.EqualTo(receivedMessages.Records.Count));
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(0, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(0));
         }
 
         [Test]

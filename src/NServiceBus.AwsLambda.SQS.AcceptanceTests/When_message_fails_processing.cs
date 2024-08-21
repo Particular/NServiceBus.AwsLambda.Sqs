@@ -21,12 +21,12 @@
             Assert.DoesNotThrowAsync(() => endpoint.Process(receivedMessages, null), "message should be moved to the error queue instead");
 
             var errorMessages = await RetrieveMessagesInErrorQueue();
-            Assert.AreEqual(1, errorMessages.Records.Count);
+            Assert.That(errorMessages.Records.Count, Is.EqualTo(1));
             JsonDocument errorMessage = JsonSerializer.Deserialize<JsonDocument>(errorMessages.Records.First().Body);
             var errorMessageHeader = errorMessage.RootElement.GetProperty("Headers");
-            Assert.AreEqual("simulated exception", errorMessageHeader.GetProperty("NServiceBus.ExceptionInfo.Message").GetString());
-            Assert.AreEqual(QueueName, errorMessageHeader.GetProperty("NServiceBus.ProcessingEndpoint").GetString());
-            Assert.AreEqual(QueueAddress, errorMessageHeader.GetProperty("NServiceBus.FailedQ").GetString());
+            Assert.That(errorMessageHeader.GetProperty("NServiceBus.ExceptionInfo.Message").GetString(), Is.EqualTo("simulated exception"));
+            Assert.That(errorMessageHeader.GetProperty("NServiceBus.ProcessingEndpoint").GetString(), Is.EqualTo(QueueName));
+            Assert.That(errorMessageHeader.GetProperty("NServiceBus.FailedQ").GetString(), Is.EqualTo(QueueAddress));
         }
 
         [Test]
@@ -46,8 +46,8 @@
             var exception = Assert.ThrowsAsync<Exception>(() => endpoint.Process(receivedMessages, null));
 
             StringAssert.Contains("Failed to process message", exception.Message);
-            Assert.AreEqual("simulated exception", exception.InnerException.Message);
-            Assert.AreEqual(0, await CountMessagesInErrorQueue());
+            Assert.That(exception.InnerException.Message, Is.EqualTo("simulated exception"));
+            Assert.That(await CountMessagesInErrorQueue(), Is.EqualTo(0));
         }
 
         public class TestContext

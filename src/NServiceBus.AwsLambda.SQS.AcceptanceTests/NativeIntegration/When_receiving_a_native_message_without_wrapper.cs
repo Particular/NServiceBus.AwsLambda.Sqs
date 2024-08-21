@@ -34,11 +34,11 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             await endpoint.Process(receivedMessages, null);
 
-            Assert.AreEqual("Hello!", context.MessageReceived);
+            Assert.That(context.MessageReceived, Is.EqualTo("Hello!"));
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(0, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -61,11 +61,11 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             await endpoint.Process(receivedMessages, null);
 
-            Assert.AreEqual("Hello!", context.MessageReceived);
+            Assert.That(context.MessageReceived, Is.EqualTo("Hello!"));
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(0, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -92,11 +92,11 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             await endpoint.Process(receivedMessages, null);
 
-            Assert.AreEqual("Hello!", context.MessageReceived);
+            Assert.That(context.MessageReceived, Is.EqualTo("Hello!"));
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(0, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -131,7 +131,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(1, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(1));
 
             var errorMessages = await RetrieveMessagesInErrorQueue();
 
@@ -174,7 +174,7 @@ namespace NServiceBus.AcceptanceTests.NativeIntegration
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(1, messagesInErrorQueueCount);
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(1));
 
             var errorMessages = await RetrieveMessagesInErrorQueue();
 

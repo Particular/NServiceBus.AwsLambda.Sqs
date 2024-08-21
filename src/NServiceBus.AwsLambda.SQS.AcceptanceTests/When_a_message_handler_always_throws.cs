@@ -20,7 +20,7 @@
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
-            Assert.AreEqual(receivedMessages.Records.Count, messagesInErrorQueueCount, "Error queue count mismatch");
+            Assert.That(messagesInErrorQueueCount, Is.EqualTo(receivedMessages.Records.Count), "Error queue count mismatch");
         }
 
         public class TestContext
