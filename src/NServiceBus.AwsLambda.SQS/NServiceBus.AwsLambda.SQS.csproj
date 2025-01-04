@@ -13,6 +13,7 @@
   <ItemGroup>
     <PackageReference Include="Amazon.Lambda.Core" Version="2.1.0" />
     <PackageReference Include="Amazon.Lambda.SQSEvents" Version="2.1.0" />
+    <PackageReference Include="NServiceBus" Version="8.2.4" />
     <PackageReference Include="NServiceBus.AmazonSQS" Version="[6.1.1, 7.0.0)" />
     <PackageReference Include="Particular.Packaging" Version="3.0.0" PrivateAssets="All" />
   </ItemGroup>
