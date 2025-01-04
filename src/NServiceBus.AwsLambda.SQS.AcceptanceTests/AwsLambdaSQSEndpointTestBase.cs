@@ -172,7 +172,7 @@
             {
                 MaxNumberOfMessages = count,
                 WaitTimeSeconds = 20,
-                AttributeNames = ["SentTimestamp"],
+                MessageSystemAttributeNames = ["SentTimestamp"],
                 MessageAttributeNames = ["*"]
             };
 
@@ -199,7 +199,7 @@
             {
                 MaxNumberOfMessages = 10,
                 WaitTimeSeconds = 20,
-                AttributeNames = ["SentTimestamp"],
+                MessageSystemAttributeNames = ["SentTimestamp"],
                 MessageAttributeNames = ["*"]
             };
 
@@ -230,7 +230,7 @@
             {
                 MaxNumberOfMessages = maxMessageCount,
                 WaitTimeSeconds = 20,
-                AttributeNames = ["SentTimestamp"],
+                MessageSystemAttributeNames = ["SentTimestamp"],
                 MessageAttributeNames = ["*"]
             };
 
