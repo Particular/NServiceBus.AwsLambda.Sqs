@@ -2,19 +2,18 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <RootNamespace>NServiceBus.AcceptanceTests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="GitHubActionsTestLogger" Version="2.3.3" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
-    <PackageReference Include="NUnit" Version="3.14.0" />
-    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
+    <ProjectReference Include="..\NServiceBus.AwsLambda.SQS\NServiceBus.AwsLambda.SQS.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NServiceBus.AwsLambda.SQS\NServiceBus.AwsLambda.SQS.csproj" />
+    <PackageReference Include="GitHubActionsTestLogger" Version="2.4.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
   </ItemGroup>
 
 </Project>
