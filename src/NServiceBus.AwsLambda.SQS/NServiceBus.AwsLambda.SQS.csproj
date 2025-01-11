@@ -7,15 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\NServiceBus.AwsLambda.SQS.Analyzer\bin\$(Configuration)\$(AnalyzerTargetFramework)\NServiceBus.AwsLambda.SQS.Analyzer.dll" Pack="true" PackagePath="analyzers/dotnet/cs/NServiceBus.AwsLambda.SQS.Analyzer.dll" Link="NServiceBus.AwsLambda.SQS.Analyzer.dll" Visible="false" />
-  </ItemGroup>
-  
-  <ItemGroup>
     <PackageReference Include="Amazon.Lambda.Core" Version="2.1.0" />
     <PackageReference Include="Amazon.Lambda.SQSEvents" Version="2.1.0" />
     <PackageReference Include="NServiceBus" Version="8.2.4" />
     <PackageReference Include="NServiceBus.AmazonSQS" Version="6.1.1" />
     <PackageReference Include="Particular.Packaging" Version="4.2.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\NServiceBus.AwsLambda.SQS.Analyzer\bin\$(Configuration)\$(AnalyzerTargetFramework)\NServiceBus.AwsLambda.SQS.Analyzer.dll" Pack="true" PackagePath="analyzers/dotnet/cs/NServiceBus.AwsLambda.SQS.Analyzer.dll" Link="NServiceBus.AwsLambda.SQS.Analyzer.dll" Visible="false" />
   </ItemGroup>
 
 </Project>
