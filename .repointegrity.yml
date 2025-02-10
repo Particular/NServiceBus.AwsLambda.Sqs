@@ -1,0 +1,4 @@
+ignore:
+  # Already released targeting .NET 7
+  - test: ComponentShouldTargetDotNetLtsVersion
+    path: src/NServiceBus.AwsLambda.SQS/NServiceBus.AwsLambda.SQS.csproj

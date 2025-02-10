@@ -1,0 +1,14 @@
+[*.cs]
+
+# Use pattern matching (may change code meaning)
+dotnet_diagnostic.IDE0078.severity = none
+
+# Use pattern matching
+dotnet_diagnostic.IDE0083.severity = none
+
+# Consider calling ConfigureAwait on the awaited task
+dotnet_diagnostic.CA2007.severity = none
+
+# Convert switch statement to expression
+dotnet_diagnostic.IDE0066.severity = none
+
