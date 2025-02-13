@@ -94,10 +94,10 @@
                 await s3Client.DeleteObjectsAsync(new DeleteObjectsRequest
                 {
                     BucketName = BucketName,
-                    Objects = new List<KeyVersion>(objects.S3Objects.Select(o => new KeyVersion
+                    Objects = [.. objects.S3Objects.Select(o => new KeyVersion
                     {
                         Key = o.Key
-                    }))
+                    })]
                 });
             }
         }
