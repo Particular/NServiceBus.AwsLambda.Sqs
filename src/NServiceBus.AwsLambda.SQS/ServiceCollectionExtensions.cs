@@ -6,7 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddAwsLambdaNServiceBusEndpoint(this IServiceCollection services, string endpointName, Action<AwsLambdaSQSEndpointConfiguration, ILambdaContext> configure = null)
+    /// <summary>
+    /// Add an NServiceBus serverless endpoint to the application services
+    /// </summary>
+    public static void AddAwsLambdaSQSEndpoint(this IServiceCollection services, string endpointName, Action<AwsLambdaSQSEndpointConfiguration, ILambdaContext> configure = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(endpointName, nameof(endpointName));
 
