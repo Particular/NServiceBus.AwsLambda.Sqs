@@ -4,6 +4,9 @@ using System;
 using Amazon.Lambda.Core;
 using Microsoft.Extensions.DependencyInjection;
 
+/// <summary>
+/// Provides NServiceBus AWS Lambda soecif extensions to the application service collection
+/// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>
