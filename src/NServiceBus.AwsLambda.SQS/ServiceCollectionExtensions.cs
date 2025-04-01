@@ -1,4 +1,4 @@
-namespace NServiceBus.AwsLambda.SQS;
+namespace NServiceBus;
 
 using System;
 using Amazon.Lambda.Core;
