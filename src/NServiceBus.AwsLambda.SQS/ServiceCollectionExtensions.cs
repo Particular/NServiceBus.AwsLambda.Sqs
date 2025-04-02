@@ -23,6 +23,6 @@ public static class AwsLambdaServiceCollectionExtensions
             return endpointConfiguration;
         });
 
-        _ = services.AddSingleton(endpoint);
+        _ = services.AddSingleton<IAwsLambdaSQSEndpoint>(endpoint);
     }
 }
