@@ -28,6 +28,10 @@ namespace NServiceBus
         public NServiceBus.Serialization.SerializationExtensions<T> UseSerialization<T>()
             where T : NServiceBus.Serialization.SerializationDefinition, new () { }
     }
+    public static class AwsLambdaServiceCollectionExtensions
+    {
+        public static void AddAwsLambdaSQSEndpoint(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string endpointName, System.Action<NServiceBus.AwsLambdaSQSEndpointConfiguration, Amazon.Lambda.Core.ILambdaContext> configure = null) { }
+    }
     public interface IAwsLambdaSQSEndpoint
     {
         System.Threading.Tasks.Task Process(Amazon.Lambda.SQSEvents.SQSEvent @event, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
@@ -43,9 +47,5 @@ namespace NServiceBus
         System.Threading.Tasks.Task Subscribe(System.Type eventType, NServiceBus.SubscribeOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task Unsubscribe(System.Type eventType, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task Unsubscribe(System.Type eventType, NServiceBus.UnsubscribeOptions options, Amazon.Lambda.Core.ILambdaContext lambdaContext, System.Threading.CancellationToken cancellationToken = default);
-    }
-    public static class ServiceCollectionExtensions
-    {
-        public static void AddAwsLambdaSQSEndpoint(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string endpointName, System.Action<NServiceBus.AwsLambdaSQSEndpointConfiguration, Amazon.Lambda.Core.ILambdaContext> configure = null) { }
     }
 }

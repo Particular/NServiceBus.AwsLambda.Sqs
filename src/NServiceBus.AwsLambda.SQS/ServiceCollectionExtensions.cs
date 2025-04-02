@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 /// <summary>
 /// Provides NServiceBus AWS Lambda specific extensions to the application service collection
 /// </summary>
-public static class ServiceCollectionExtensions
+public static class AwsLambdaServiceCollectionExtensions
 {
     /// <summary>
     /// Add an NServiceBus serverless endpoint to the application services
