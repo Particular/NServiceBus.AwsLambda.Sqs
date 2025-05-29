@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\NServiceBus.AwsLambda.SQS.Analyzer\bin\$(Configuration)\$(AnalyzerTargetFramework)\NServiceBus.AwsLambda.SQS.Analyzer.dll" Pack="true" PackagePath="analyzers/dotnet/roslyn4.8/cs/NServiceBus.AwsLambda.SQS.Analyzer.dll" Visible="false" />
+    <None Include="..\NServiceBus.AwsLambda.SQS.Analyzer\bin\$(Configuration)\$(AnalyzerTargetFramework)\NServiceBus.AwsLambda.SQS.Analyzer.dll" Pack="true" PackagePath="analyzers/dotnet/roslyn4.14/cs/NServiceBus.AwsLambda.SQS.Analyzer.dll" Visible="false" />
   </ItemGroup>
 
 </Project>
