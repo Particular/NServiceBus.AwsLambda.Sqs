@@ -9,6 +9,7 @@
     using System.Threading.Tasks;
     using Amazon.Lambda.Core;
     using Amazon.Lambda.SQSEvents;
+    using Amazon.Runtime;
     using Amazon.SQS;
     using Amazon.SQS.Model;
     using AwsLambda.SQS;
@@ -320,7 +321,9 @@
                     return;
                 }
 
-                if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, sqsClient.Config.ClockOffset))
+                // In some unit test the pump is not started, with the consequence that the endpoint URL is never evaluated
+                var clockCorrection = receiveQueueUrl == null ? TimeSpan.Zero : CorrectClockSkew.GetClockCorrectionForEndpoint(receiveQueueUrl);
+                if (IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, clockCorrection))
                 {
                     // here we also want to use the native message id because the core demands it like that
                     await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, receivedMessage, receivedLambdaMessage, lambdaContext, cancellationToken).ConfigureAwait(false);
