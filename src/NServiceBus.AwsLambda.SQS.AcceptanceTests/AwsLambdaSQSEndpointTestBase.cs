@@ -79,30 +79,38 @@
         [TearDown]
         public async Task TearDown()
         {
-            var queueUrls = queueNames.Select(name => sqsClient.GetQueueUrlAsync(name));
-            await Task.WhenAll(queueUrls);
-            var queueDeletions = queueUrls.Select(x => x.Result.QueueUrl).Select(url => sqsClient.DeleteQueueAsync(url));
-            await Task.WhenAll(queueDeletions);
-            var objects = await s3Client.ListObjectsAsync(new ListObjectsRequest
+            if (sqsClient is not null)
             {
-                BucketName = BucketName,
-                Prefix = Prefix
-            });
+                var queueUrls = queueNames.Select(name => sqsClient.GetQueueUrlAsync(name));
+                await Task.WhenAll(queueUrls);
+                var queueDeletions = queueUrls.Select(x => x.Result.QueueUrl).Select(url => sqsClient.DeleteQueueAsync(url));
+                await Task.WhenAll(queueDeletions);
 
-            if (objects.S3Objects.Any())
-            {
-                await s3Client.DeleteObjectsAsync(new DeleteObjectsRequest
-                {
-                    BucketName = BucketName,
-                    Objects = [.. objects.S3Objects.Select(o => new KeyVersion
-                    {
-                        Key = o.Key
-                    })]
-                });
+                sqsClient.Dispose();
             }
 
-            s3Client.Dispose();
-            sqsClient.Dispose();
+            if (s3Client is not null)
+            {
+                var objects = await s3Client.ListObjectsAsync(new ListObjectsRequest
+                {
+                    BucketName = BucketName,
+                    Prefix = Prefix
+                });
+
+                if (objects.S3Objects is not null && objects.S3Objects.Any())
+                {
+                    await s3Client.DeleteObjectsAsync(new DeleteObjectsRequest
+                    {
+                        BucketName = BucketName,
+                        Objects = [.. objects.S3Objects.Select(o => new KeyVersion
+                        {
+                            Key = o.Key
+                        })]
+                    });
+                }
+
+                s3Client.Dispose();
+            }
         }
 
         protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration<TTestContext>(TTestContext testContext, bool useXmlSerializer = false)

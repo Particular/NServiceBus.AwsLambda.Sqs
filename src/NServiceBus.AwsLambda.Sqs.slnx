@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="../.github/workflows/ci.yml" />
+    <File Path="../.github/workflows/release.yml" />
+    <File Path="Custom.Build.props" />
+  </Folder>
+  <Project Path="NServiceBus.AwsLambda.SQS.AcceptanceTests/NServiceBus.AwsLambda.SQS.AcceptanceTests.csproj" />
+  <Project Path="NServiceBus.AwsLambda.SQS.Analyzer.Tests/NServiceBus.AwsLambda.SQS.Analyzer.Tests.csproj" />
+  <Project Path="NServiceBus.AwsLambda.SQS.Analyzer/NServiceBus.AwsLambda.SQS.Analyzer.csproj" />
+  <Project Path="NServiceBus.AwsLambda.SQS.Tests/NServiceBus.AwsLambda.SQS.Tests.csproj" />
+  <Project Path="NServiceBus.AwsLambda.SQS/NServiceBus.AwsLambda.SQS.csproj" />
+</Solution>
