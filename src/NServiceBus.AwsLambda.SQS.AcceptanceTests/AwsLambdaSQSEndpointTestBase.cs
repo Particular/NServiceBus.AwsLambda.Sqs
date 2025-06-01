@@ -14,6 +14,7 @@
     using Amazon.SimpleNotificationService;
     using Amazon.SQS;
     using Amazon.SQS.Model;
+    using Amazon.SQS.Util;
     using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
 
@@ -220,10 +221,14 @@
 
         protected async Task<int> CountMessagesInErrorQueue()
         {
-            var attReq = new GetQueueAttributesRequest { QueueUrl = createdErrorQueue.QueueUrl };
-            attReq.AttributeNames.Add("ApproximateNumberOfMessages");
-            var response = await sqsClient.GetQueueAttributesAsync(attReq).ConfigureAwait(false);
-            return response.ApproximateNumberOfMessages;
+            var attReq = new GetQueueAttributesRequest
+            {
+                QueueUrl = createdErrorQueue.QueueUrl,
+                AttributeNames = [SQSConstants.ATTRIBUTE_APPROXIMATE_NUMBER_OF_MESSAGES]
+            };
+            var response = await sqsClient.GetQueueAttributesAsync(attReq);
+            // workaround for a bug in the AWS SDK where the attribute is not always present
+            return response.Attributes.TryGetValue(SQSConstants.ATTRIBUTE_APPROXIMATE_NUMBER_OF_MESSAGES, out var value) && int.TryParse(value, out var count) ? count : 0;
         }
 
         protected async Task<SQSEvent> RetrieveMessagesInErrorQueue(int maxMessageCount = 10)
