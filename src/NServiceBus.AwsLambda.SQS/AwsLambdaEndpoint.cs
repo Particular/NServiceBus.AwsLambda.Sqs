@@ -9,6 +9,7 @@
     using System.Threading.Tasks;
     using Amazon.Lambda.Core;
     using Amazon.Lambda.SQSEvents;
+    using Amazon.Runtime;
     using Amazon.SQS;
     using Amazon.SQS.Model;
     using AwsLambda.SQS;
@@ -85,6 +86,12 @@
 
             sqsClient = configuration.Transport.SqsClient;
             s3Settings = configuration.Transport.S3;
+
+            var getQueueUrlRequest = new GetQueueUrlRequest
+            {
+                QueueName = "any-queue-name" // This is a dummy value resolve the endpoint URL from the SQS client.
+            };
+            endpointUrl = sqsClient.DetermineServiceOperationEndpoint(getQueueUrlRequest).URL;
 
             var serverlessTransport = new ServerlessTransport(configuration.Transport);
             configuration.EndpointConfiguration.UseTransport(serverlessTransport);
@@ -245,16 +252,9 @@
             {
                 try
                 {
-                    if (receivedMessage.MessageAttributes.TryGetValue(Headers.MessageId, out var messageIdAttribute))
-                    {
-                        messageId = messageIdAttribute.StringValue;
-                    }
-                    else
-                    {
-                        messageId = nativeMessageId;
-                    }
+                    messageId = receivedMessage.MessageAttributes?.TryGetValue(Headers.MessageId, out var messageIdAttribute) is true ? messageIdAttribute.StringValue : nativeMessageId;
 
-                    if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.Headers, out var headersAttribute))
+                    if (receivedMessage.MessageAttributes?.TryGetValue(TransportHeaders.Headers, out var headersAttribute) is true)
                     {
                         transportMessage = new TransportMessage
                         {
@@ -271,8 +271,8 @@
                     else
                     {
                         // When the MessageTypeFullName attribute is available, we're assuming native integration
-                        if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.MessageTypeFullName,
-                                out var enclosedMessageType))
+                        if (receivedMessage.MessageAttributes?.TryGetValue(TransportHeaders.MessageTypeFullName,
+                                out var enclosedMessageType) is true)
                         {
                             var headers = new Dictionary<string, string>
                             {
@@ -283,8 +283,9 @@
                                 } // we're copying over the value of the native message attribute into the headers, converting this into a nsb message
                             };
 
-                            if (receivedMessage.MessageAttributes.TryGetValue(TransportHeaders.S3BodyKey,
-                                    out var s3BodyKey))
+                            MessageAttributeValue s3BodyKey = null;
+                            if (receivedMessage.MessageAttributes?.TryGetValue(TransportHeaders.S3BodyKey,
+                                    out s3BodyKey) is true)
                             {
                                 headers.Add(TransportHeaders.S3BodyKey, s3BodyKey.StringValue);
                             }
@@ -320,7 +321,8 @@
                     return;
                 }
 
-                if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, sqsClient.Config.ClockOffset))
+                var clockCorrection = CorrectClockSkew.GetClockCorrectionForEndpoint(endpointUrl);
+                if (!IsMessageExpired(receivedMessage, transportMessage.Headers, messageId, clockCorrection))
                 {
                     // here we also want to use the native message id because the core demands it like that
                     await ProcessMessageWithInMemoryRetries(transportMessage.Headers, nativeMessageId, messageBody, receivedMessage, receivedLambdaMessage, lambdaContext, cancellationToken).ConfigureAwait(false);
@@ -342,12 +344,11 @@
 
         static bool IsMessageExpired(Message receivedMessage, Dictionary<string, string> headers, string messageId, TimeSpan clockOffset)
         {
-            if (!headers.TryGetValue(TransportHeaders.TimeToBeReceived, out var rawTtbr))
+            if (!headers.Remove(TransportHeaders.TimeToBeReceived, out var rawTtbr))
             {
                 return false;
             }
 
-            headers.Remove(TransportHeaders.TimeToBeReceived);
             var timeToBeReceived = TimeSpan.Parse(rawTtbr);
             if (timeToBeReceived == TimeSpan.MaxValue)
             {
@@ -474,7 +475,7 @@
             {
                 // Ok to use LINQ here since this is not really a hot path
                 var messageAttributeValues = message.MessageAttributes
-                    .ToDictionary(pair => pair.Key, messageAttribute => messageAttribute.Value);
+                    ?.ToDictionary(pair => pair.Key, messageAttribute => messageAttribute.Value);
 
                 await sqsClient.SendMessageAsync(new SendMessageRequest
                 {
@@ -553,6 +554,7 @@
         string receiveQueueAddress;
         string receiveQueueUrl;
         string errorQueueUrl;
+        string endpointUrl;
 
         static readonly ILog Logger = LogManager.GetLogger(typeof(AwsLambdaSQSEndpoint));
     }

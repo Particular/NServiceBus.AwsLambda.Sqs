@@ -89,12 +89,12 @@
                 Prefix = Prefix
             });
 
-            if (objects.S3Objects.Any())
+            if (objects.S3Objects is { Count: > 0 } s3Objects)
             {
                 await s3Client.DeleteObjectsAsync(new DeleteObjectsRequest
                 {
                     BucketName = BucketName,
-                    Objects = [.. objects.S3Objects.Select(o => new KeyVersion
+                    Objects = [.. s3Objects.Select(o => new KeyVersion
                     {
                         Key = o.Key
                     })]
@@ -114,10 +114,15 @@
 
         protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration(bool useXmlSerializer = false)
         {
-            var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient());
-            configuration.Transport.QueueNamePrefix = Prefix;
-            configuration.Transport.TopicNamePrefix = Prefix;
-            configuration.Transport.S3 = new S3Settings(BucketName, Prefix, CreateS3Client());
+            var configuration = new AwsLambdaSQSEndpointConfiguration(QueueName, CreateSQSClient(), CreateSNSClient())
+            {
+                Transport =
+                {
+                    QueueNamePrefix = Prefix,
+                    TopicNamePrefix = Prefix,
+                    S3 = new S3Settings(BucketName, Prefix, CreateS3Client())
+                }
+            };
 
             var advanced = configuration.AdvancedConfiguration;
 
@@ -138,10 +143,7 @@
             return configuration;
         }
 
-        protected void RegisterQueueNameToCleanup(string queueName)
-        {
-            queueNames.Add(queueName);
-        }
+        protected void RegisterQueueNameToCleanup(string queueName) => queueNames.Add(queueName);
 
         protected async Task<SQSEvent> GenerateAndReceiveSQSEvent<T>(int count = 1) where T : new()
         {
