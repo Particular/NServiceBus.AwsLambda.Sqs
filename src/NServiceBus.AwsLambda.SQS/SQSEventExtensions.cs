@@ -46,9 +46,8 @@
             target.StringValue = source.StringValue ?? target.StringValue;
             target.BinaryValue = source.BinaryValue ?? target.BinaryValue;
 
-            // The SQS client returns empty lists instead of null
-            target.StringListValues = source.StringListValues ?? [];
-            target.BinaryListValues = source.BinaryListValues ?? [];
+            target.StringListValues = source.StringListValues;
+            target.BinaryListValues = source.BinaryListValues;
 
             return target;
         }
