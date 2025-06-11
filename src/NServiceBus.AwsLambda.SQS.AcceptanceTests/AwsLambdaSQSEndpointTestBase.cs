@@ -19,7 +19,8 @@
     using NUnit.Framework;
 
     [TestFixture]
-    class AwsLambdaSQSEndpointTestBase
+
+    abstract class AwsLambdaSQSEndpointTestBase
     {
         protected const string DelayedDeliveryQueueSuffix = "-delay.fifo";
         const int QueueDelayInSeconds = 900; // 15 * 60
