@@ -60,12 +60,12 @@ namespace NServiceBus.AwsLambda.SQS.Analyzer
 
         static void Analyze(SyntaxNodeAnalysisContext context)
         {
-            if (!(context.Node is InvocationExpressionSyntax invocationExpression))
+            if (context.Node is not InvocationExpressionSyntax invocationExpression)
             {
                 return;
             }
 
-            if (!(invocationExpression.Expression is MemberAccessExpressionSyntax memberAccessExpression))
+            if (invocationExpression.Expression is not MemberAccessExpressionSyntax memberAccessExpression)
             {
                 return;
             }
@@ -79,7 +79,7 @@ namespace NServiceBus.AwsLambda.SQS.Analyzer
 
         static void AnalyzeTransport(SyntaxNodeAnalysisContext context)
         {
-            if (!(context.Node is MemberAccessExpressionSyntax memberAccess))
+            if (context.Node is not MemberAccessExpressionSyntax memberAccess)
             {
                 return;
             }
@@ -92,12 +92,13 @@ namespace NServiceBus.AwsLambda.SQS.Analyzer
 
             var memberAccessSymbol = context.SemanticModel.GetSymbolInfo(memberAccess, context.CancellationToken);
 
-            if (!(memberAccessSymbol.Symbol is IPropertySymbol propertySymbol))
+            if (memberAccessSymbol.Symbol is not IPropertySymbol propertySymbol)
             {
                 return;
             }
 
-            if (propertySymbol.ContainingType.ToString() == "NServiceBus.SqsTransport" || propertySymbol.ContainingType.ToString() == "NServiceBus.Transport.TransportDefinition")
+            var containingType = propertySymbol.ContainingType.ToString();
+            if (containingType is "NServiceBus.SqsTransport" or "NServiceBus.Transport.TransportDefinition")
             {
                 context.ReportDiagnostic(diagnosticDescriptor, memberAccess);
 
@@ -113,12 +114,12 @@ namespace NServiceBus.AwsLambda.SQS.Analyzer
 
             var memberAccessSymbol = context.SemanticModel.GetSymbolInfo(memberAccessExpression, context.CancellationToken);
 
-            if (!(memberAccessSymbol.Symbol is IMethodSymbol methodSymbol))
+            if (memberAccessSymbol.Symbol is not IMethodSymbol methodSymbol)
             {
                 return;
             }
 
-            if (methodSymbol.ReceiverType.ToString() == "NServiceBus.EndpointConfiguration")
+            if (methodSymbol.ReceiverType?.ToString() == "NServiceBus.EndpointConfiguration")
             {
                 context.ReportDiagnostic(diagnosticDescriptor, invocationExpression);
             }
@@ -133,12 +134,13 @@ namespace NServiceBus.AwsLambda.SQS.Analyzer
 
             var memberAccessSymbol = context.SemanticModel.GetSymbolInfo(memberAccessExpression, context.CancellationToken);
 
-            if (!(memberAccessSymbol.Symbol is IMethodSymbol methodSymbol))
+            if (memberAccessSymbol.Symbol is not IMethodSymbol methodSymbol)
             {
                 return;
             }
 
-            if (methodSymbol.ReceiverType.ToString() == "NServiceBus.SendOptions" || methodSymbol.ReceiverType.ToString() == "NServiceBus.ReplyOptions")
+            var receiverType = methodSymbol.ReceiverType?.ToString();
+            if (receiverType is "NServiceBus.SendOptions" or "NServiceBus.ReplyOptions")
             {
                 context.ReportDiagnostic(diagnosticDescriptor, invocationExpression);
             }
@@ -153,12 +155,12 @@ namespace NServiceBus.AwsLambda.SQS.Analyzer
 
             var memberAccessSymbol = context.SemanticModel.GetSymbolInfo(memberAccessExpression, context.CancellationToken);
 
-            if (!(memberAccessSymbol.Symbol is IMethodSymbol methodSymbol))
+            if (memberAccessSymbol.Symbol is not IMethodSymbol methodSymbol)
             {
                 return;
             }
 
-            if (methodSymbol.ReceiverType.ToString() == "NServiceBus.TransportExtensions<NServiceBus.SqsTransport>")
+            if (methodSymbol.ReceiverType?.ToString() == "NServiceBus.TransportExtensions<NServiceBus.SqsTransport>")
             {
                 context.ReportDiagnostic(diagnosticDescriptor, invocationExpression);
             }
