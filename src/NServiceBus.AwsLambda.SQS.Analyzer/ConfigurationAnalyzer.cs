@@ -119,7 +119,9 @@ namespace NServiceBus.AwsLambda.SQS.Analyzer
                 return;
             }
 
-            if (methodSymbol.ReceiverType?.ToString() == "NServiceBus.EndpointConfiguration")
+            var receiverType = methodSymbol.ReceiverType?.ToString();
+
+            if (receiverType is not null && (receiverType == "NServiceBus.EndpointConfiguration" || receiverType.EndsWith(".extension(NServiceBus.EndpointConfiguration)")))
             {
                 context.ReportDiagnostic(diagnosticDescriptor, invocationExpression);
             }
