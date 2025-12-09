@@ -14,6 +14,7 @@ namespace NServiceBus.AwsLambda.SQS.Analyzer.Tests
         [TestCase("PurgeOnStartup(true)", PurgeOnStartupNotAllowedId)]
         [TestCase("SetDiagnosticsPath(null)", SetDiagnosticsPathNotAllowedId)]
         [TestCase("UseTransport(new SqsTransport())", UseTransportNotAllowedId)]
+        [TestCase("UseTransport<SqsTransport>()", UseTransportNotAllowedId)]
         public Task DiagnosticIsReportedForEndpointConfiguration(string configuration, string diagnosticId)
         {
             var source =
@@ -41,6 +42,7 @@ class Foo
         [TestCase("PurgeOnStartup(true)", PurgeOnStartupNotAllowedId)]
         [TestCase("SetDiagnosticsPath(null)", SetDiagnosticsPathNotAllowedId)]
         [TestCase("UseTransport(new SqsTransport())", UseTransportNotAllowedId)]
+        [TestCase("UseTransport<SqsTransport>()", UseTransportNotAllowedId)]
         public Task DiagnosticIsNotReportedForOtherEndpointConfiguration(string configuration, string diagnosticId)
         {
             var source =
@@ -58,6 +60,7 @@ class SomeOtherClass
     internal void PurgeOnStartup(bool purge) {{ }}
     internal void SetDiagnosticsPath(string someProperty) {{ }}
     internal void UseTransport(SqsTransport transport) {{ }}
+    internal void UseTransport<SqsTransport>() {{ }}
 }}
 
 class Foo
