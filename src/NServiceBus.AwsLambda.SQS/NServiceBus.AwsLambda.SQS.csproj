@@ -14,7 +14,7 @@
     <PackageReference Include="Amazon.Lambda.Core" Version="2.6.0" />
     <PackageReference Include="Amazon.Lambda.SQSEvents" Version="2.2.0" />
     <PackageReference Include="NServiceBus" Version="10.0.0-alpha.24" />
-    <PackageReference Include="NServiceBus.AmazonSQS" Version="9.0.0-alpha.4" />
+    <PackageReference Include="NServiceBus.AmazonSQS" Version="9.0.0-alpha.5" />
     <PackageReference Include="Particular.Packaging" Version="4.5.0" PrivateAssets="All" />
   </ItemGroup>
 
