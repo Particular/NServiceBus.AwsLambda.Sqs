@@ -2,6 +2,7 @@ namespace NServiceBus.AwsLambda.SQS.Analyzer.Tests
 {
     using System.Threading.Tasks;
     using NUnit.Framework;
+    using Particular.AnalyzerTesting;
     using static AwsLambdaDiagnostics;
 
     [TestFixture]
@@ -32,7 +33,7 @@ class Foo
     }}
 }}";
 
-            return Assert(diagnosticId, source);
+            return Assert(source, diagnosticId);
         }
 
         [TestCase("DefineCriticalErrorAction((errorContext, cancellationToken) => Task.CompletedTask)", DefineCriticalErrorActionNotAllowedId)]
@@ -71,7 +72,7 @@ class Foo
     }}
 }}";
 
-            return Assert(diagnosticId, source);
+            return Assert(source, diagnosticId);
         }
     }
 }
