@@ -60,7 +60,12 @@
 
         void TrySpecifyDefaultLicense()
         {
-            var licenseText = Environment.GetEnvironmentVariable("NSERVICEBUS_LICENSE");
+            var licenseText = Environment.GetEnvironmentVariable("PARTICULARSOFTWARE_LICENSE");
+            if (string.IsNullOrWhiteSpace(licenseText))
+            {
+                licenseText = Environment.GetEnvironmentVariable("NSERVICEBUS_LICENSE");
+            }
+ 
             if (!string.IsNullOrWhiteSpace(licenseText))
             {
                 EndpointConfiguration.License(licenseText);
