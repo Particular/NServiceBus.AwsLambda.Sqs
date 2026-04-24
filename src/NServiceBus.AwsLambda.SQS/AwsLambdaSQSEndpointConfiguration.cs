@@ -65,7 +65,7 @@
             {
                 licenseText = Environment.GetEnvironmentVariable("NSERVICEBUS_LICENSE");
             }
- 
+
             if (!string.IsNullOrWhiteSpace(licenseText))
             {
                 EndpointConfiguration.License(licenseText);
