@@ -32,7 +32,9 @@
         {
             EndpointConfiguration = new EndpointConfiguration(endpointName);
 
+#pragma warning disable CS0618 // Type or member is obsolete
             LogManager.Use<LambdaLoggerDefinition>();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             recoverabilityPolicy.SendFailedMessagesToErrorQueue = true;
 
