@@ -28,8 +28,8 @@
             return serverlessTransportInfrastructure;
         }
 
-        public ServerlessTransportInfrastructure GetTransportInfrastructure(IEndpointInstance _) =>
-            // IEndpointInstance is only required to guarantee that GetTransportInfrastructure can't be called before NServiceBus called Initialize.
+        public ServerlessTransportInfrastructure GetTransportInfrastructure(IMessageSession _) =>
+            // IMessageSession is only required to guarantee that GetTransportInfrastructure can't be called before NServiceBus called Initialize.
             serverlessTransportInfrastructure;
 
         public override IReadOnlyCollection<TransportTransactionMode> GetSupportedTransactionModes() => supportedTransactionModes;
