@@ -108,12 +108,10 @@
             sqsClient.Dispose();
         }
 
-        Action<IServiceCollection> registerContextType;
-
         protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration<TTestContext>(TTestContext testContext, bool useXmlSerializer = false)
         {
             var configuration = DefaultLambdaEndpointConfiguration(useXmlSerializer);
-            registerContextType = services => services.AddSingleton(typeof(TTestContext), testContext);
+            configuration.RegisterServices(services => services.AddSingleton(typeof(TTestContext), testContext));
             return configuration;
         }
 
@@ -164,7 +162,6 @@
             endpointConfiguration.UseTransport(transport);
 
             var builder = Host.CreateApplicationBuilder();
-            registerContextType?.Invoke(builder.Services);
             builder.Services.AddNServiceBusEndpoint(endpointConfiguration);
             var host = builder.Build();
 

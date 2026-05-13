@@ -25,6 +25,7 @@ namespace NServiceBus
         public NServiceBus.RoutingSettings<NServiceBus.SqsTransport> RoutingSettings { get; }
         public NServiceBus.SqsTransport Transport { get; }
         public void DoNotSendMessagesToErrorQueue() { }
+        public void RegisterServices(System.Action<Microsoft.Extensions.DependencyInjection.IServiceCollection> registerServices) { }
         public NServiceBus.Serialization.SerializationExtensions<T> UseSerialization<T>()
             where T : NServiceBus.Serialization.SerializationDefinition, new () { }
     }

@@ -99,6 +99,7 @@
             configuration.EndpointConfiguration.UseTransport(serverlessTransport);
 
             var builder = Host.CreateApplicationBuilder();
+            configuration.AddRegisteredServices(builder.Services);
             builder.Services.AddNServiceBusEndpoint(configuration.EndpointConfiguration);
             var host = builder.Build();
             await host.StartAsync(cancellationToken).ConfigureAwait(false);
