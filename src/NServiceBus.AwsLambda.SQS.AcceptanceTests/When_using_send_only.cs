@@ -2,6 +2,7 @@
 {
     using System.Threading.Tasks;
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
     using NServiceBus;
     using NUnit.Framework;
 
@@ -37,10 +38,14 @@
 
             destinationConfiguration.UseSerialization<SystemJsonSerializer>();
             destinationConfiguration.EnableInstallers();
-            destinationConfiguration.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
             destinationConfiguration.UseTransport(destinationTransport);
 
-            var destinationEndpoint = await Endpoint.Start(destinationConfiguration);
+            var builder = Host.CreateApplicationBuilder();
+            builder.Services.AddSingleton(typeof(TestContext), context);
+            builder.Services.AddNServiceBusEndpoint(destinationConfiguration);
+
+            var destinationHost = builder.Build();
+            await destinationHost.StartAsync();
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
@@ -54,7 +59,7 @@
 
             await context.MessageReceived.Task;
 
-            await destinationEndpoint.Stop();
+            await destinationHost.StopAsync();
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 

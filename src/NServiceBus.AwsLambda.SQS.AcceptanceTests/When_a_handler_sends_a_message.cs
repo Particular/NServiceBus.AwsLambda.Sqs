@@ -3,6 +3,7 @@
     using System;
     using System.Threading.Tasks;
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
     using NUnit.Framework;
 
     class When_a_handler_sends_a_message : AwsLambdaSQSEndpointTestBase
@@ -22,13 +23,16 @@
 
             destinationConfiguration.UseSerialization<SystemJsonSerializer>();
             destinationConfiguration.EnableInstallers();
-            destinationConfiguration.RegisterComponents(c => c.AddSingleton(typeof(TestContext), context));
             destinationConfiguration.UseTransport(new SqsTransport(CreateSQSClient(), CreateSNSClient())
             {
                 QueueNamePrefix = Prefix
             });
 
-            var destinationEndpoint = await Endpoint.Start(destinationConfiguration);
+            var builder = Host.CreateApplicationBuilder();
+            builder.Services.AddSingleton(typeof(TestContext), context);
+            builder.Services.AddNServiceBusEndpoint(destinationConfiguration);
+            var destinationHost = builder.Build();
+            await destinationHost.StartAsync();
 
             var endpoint = new AwsLambdaSQSEndpoint(ctx =>
             {
@@ -41,7 +45,7 @@
 
             await context.MessageReceived.Task.WaitAsync(TimeSpan.FromMinutes(1));
 
-            await destinationEndpoint.Stop();
+            await destinationHost.StopAsync();
 
             var messagesInErrorQueueCount = await CountMessagesInErrorQueue();
 
