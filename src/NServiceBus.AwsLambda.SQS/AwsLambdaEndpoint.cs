@@ -98,7 +98,7 @@
             var serverlessTransport = new ServerlessTransport(configuration.Transport);
             configuration.EndpointConfiguration.UseTransport(serverlessTransport);
 
-            var builder = Host.CreateApplicationBuilder();
+            var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
             configuration.AddRegisteredServices(builder.Services);
             builder.Services.AddNServiceBusEndpoint(configuration.EndpointConfiguration);
             var host = builder.Build();
