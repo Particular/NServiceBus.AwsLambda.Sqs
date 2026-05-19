@@ -48,7 +48,7 @@
             {
                 throw new InvalidOperationException(
                     $"This endpoint cannot process messages because it is configured in send-only mode. Remove the '{nameof(EndpointConfiguration)}.{nameof(EndpointConfiguration.SendOnly)}' configuration.'"
-                );
+                    );
             }
 
             var processTasks = new List<Task>();
@@ -101,12 +101,10 @@
 
             var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
 
-            configuration.AddRegisteredServices(builder.Services);
-            builder.Services.AddNServiceBusEndpoint(configuration.EndpointConfiguration);
-
             builder.Logging.ClearProviders();
             builder.Logging.AddLambdaLogger();
-
+            configuration.AddRegisteredServices(builder.Services);
+            builder.Services.AddNServiceBusEndpoint(configuration.EndpointConfiguration);
             var host = builder.Build();
             await host.StartAsync(cancellationToken).ConfigureAwait(false);
 
@@ -292,7 +290,9 @@
                             {
                                 { Headers.MessageId, messageId },
                                 { Headers.EnclosedMessageTypes, enclosedMessageType.StringValue },
-                                { TransportHeaders.MessageTypeFullName, enclosedMessageType.StringValue } // we're copying over the value of the native message attribute into the headers, converting this into a nsb message
+                                {
+                                    TransportHeaders.MessageTypeFullName, enclosedMessageType.StringValue
+                                } // we're copying over the value of the native message attribute into the headers, converting this into a nsb message
                             };
 
                             MessageAttributeValue s3BodyKey = null;
@@ -490,11 +490,11 @@
                     ?.ToDictionary(pair => pair.Key, messageAttribute => messageAttribute.Value);
 
                 await sqsClient.SendMessageAsync(new SendMessageRequest
-                    {
-                        QueueUrl = errorQueueUrl,
-                        MessageBody = message.Body,
-                        MessageAttributes = messageAttributeValues
-                    }, cancellationToken)
+                {
+                    QueueUrl = errorQueueUrl,
+                    MessageBody = message.Body,
+                    MessageAttributes = messageAttributeValues
+                }, cancellationToken)
                     .ConfigureAwait(false);
                 // The MessageAttributes on message are read-only attributes provided by SQS
                 // and can't be re-sent. Unfortunately all the SQS metadata
@@ -506,11 +506,11 @@
                 try
                 {
                     await sqsClient.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest
-                        {
-                            QueueUrl = receiveQueueUrl,
-                            ReceiptHandle = message.ReceiptHandle,
-                            VisibilityTimeout = 0
-                        }, CancellationToken.None)
+                    {
+                        QueueUrl = receiveQueueUrl,
+                        ReceiptHandle = message.ReceiptHandle,
+                        VisibilityTimeout = 0
+                    }, CancellationToken.None)
                         .ConfigureAwait(false);
                 }
                 catch (Exception changeMessageVisibilityEx)
@@ -524,10 +524,10 @@
             try
             {
                 await sqsClient.DeleteMessageAsync(new DeleteMessageRequest
-                    {
-                        QueueUrl = receiveQueueUrl,
-                        ReceiptHandle = message.ReceiptHandle
-                    }, CancellationToken.None)
+                {
+                    QueueUrl = receiveQueueUrl,
+                    ReceiptHandle = message.ReceiptHandle
+                }, CancellationToken.None)
                     .ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -555,7 +555,10 @@
         bool isSendOnly;
         readonly Func<ILambdaContext, AwsLambdaSQSEndpointConfiguration> configurationFactory;
         readonly SemaphoreSlim semaphoreLock = new(initialCount: 1, maxCount: 1);
-        readonly JsonSerializerOptions transportMessageSerializerOptions = new() { TypeInfoResolver = TransportMessageSerializerContext.Default };
+        readonly JsonSerializerOptions transportMessageSerializerOptions = new()
+        {
+            TypeInfoResolver = TransportMessageSerializerContext.Default
+        };
         IMessageProcessor pipeline;
         IMessageSession messageSession;
         IAmazonSQS sqsClient;
