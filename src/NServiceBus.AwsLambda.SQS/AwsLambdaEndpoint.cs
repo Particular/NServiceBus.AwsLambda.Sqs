@@ -100,6 +100,8 @@
             configuration.EndpointConfiguration.UseTransport(serverlessTransport);
 
             var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+
+            builder.Logging.ClearProviders();
             builder.Logging.AddLambdaLogger();
             configuration.AddRegisteredServices(builder.Services);
             builder.Services.AddNServiceBusEndpoint(configuration.EndpointConfiguration);
