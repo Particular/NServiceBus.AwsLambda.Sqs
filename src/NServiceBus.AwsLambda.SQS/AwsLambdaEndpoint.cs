@@ -104,6 +104,7 @@
             configuration.AddRegisteredServices(builder.Services);
             builder.Services.AddNServiceBusEndpoint(configuration.EndpointConfiguration);
 
+            // Core loggers are designed to disable themselves but we want to make sure only the lambda loggers are active
             builder.Logging.ClearProviders();
             builder.Logging.AddLambdaLogger();
 
