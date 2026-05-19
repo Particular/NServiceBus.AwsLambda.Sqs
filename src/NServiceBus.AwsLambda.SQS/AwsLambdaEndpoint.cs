@@ -15,10 +15,10 @@
     using AwsLambda.SQS;
     using AwsLambda.SQS.TransportWrapper;
     using Extensibility;
+    using Logging;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
-    using NServiceBus.Logging;
     using Transport;
 
     /// <summary>
@@ -100,7 +100,7 @@
             configuration.EndpointConfiguration.UseTransport(serverlessTransport);
 
             var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
-            _ = builder.Logging.AddLambdaLogger();
+            builder.Logging.AddLambdaLogger();
             configuration.AddRegisteredServices(builder.Services);
             builder.Services.AddNServiceBusEndpoint(configuration.EndpointConfiguration);
             var host = builder.Build();
