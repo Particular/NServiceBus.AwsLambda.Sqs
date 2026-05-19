@@ -101,10 +101,12 @@
 
             var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
 
-            builder.Logging.ClearProviders();
-            builder.Logging.AddLambdaLogger();
             configuration.AddRegisteredServices(builder.Services);
             builder.Services.AddNServiceBusEndpoint(configuration.EndpointConfiguration);
+
+            builder.Logging.ClearProviders();
+            builder.Logging.AddLambdaLogger();
+
             var host = builder.Build();
             await host.StartAsync(cancellationToken).ConfigureAwait(false);
 
