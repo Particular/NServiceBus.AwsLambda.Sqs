@@ -7,7 +7,6 @@
     using Amazon.SQS;
     using AwsLambda.SQS;
     using Microsoft.Extensions.DependencyInjection;
-    using NServiceBus.Logging;
     using Serialization;
 
     /// <summary>
@@ -33,10 +32,6 @@
         public AwsLambdaSQSEndpointConfiguration(string endpointName, IAmazonSQS sqsClient, IAmazonSimpleNotificationService snsClient)
         {
             EndpointConfiguration = new EndpointConfiguration(endpointName);
-
-#pragma warning disable CS0618 // Type or member is obsolete
-            LogManager.Use<LambdaLoggerDefinition>();
-#pragma warning restore CS0618 // Type or member is obsolete
 
             recoverabilityPolicy.SendFailedMessagesToErrorQueue = true;
 
