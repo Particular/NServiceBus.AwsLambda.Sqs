@@ -18,6 +18,7 @@
     using Logging;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
     using Transport;
 
     /// <summary>
@@ -99,8 +100,14 @@
             configuration.EndpointConfiguration.UseTransport(serverlessTransport);
 
             var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+
             configuration.AddRegisteredServices(builder.Services);
             builder.Services.AddNServiceBusEndpoint(configuration.EndpointConfiguration);
+
+            // Core loggers are designed to disable themselves but we want to make sure only the lambda loggers are active
+            builder.Logging.ClearProviders();
+            builder.Logging.AddLambdaLogger();
+
             var host = builder.Build();
             await host.StartAsync(cancellationToken).ConfigureAwait(false);
 
