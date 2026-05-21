@@ -16,6 +16,9 @@
     using AwsLambda.SQS.TransportWrapper;
     using Extensibility;
     using Logging;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
     using Transport;
 
     /// <summary>
@@ -96,9 +99,21 @@
             var serverlessTransport = new ServerlessTransport(configuration.Transport);
             configuration.EndpointConfiguration.UseTransport(serverlessTransport);
 
-            endpoint = await Endpoint.Start(configuration.EndpointConfiguration, cancellationToken).ConfigureAwait(false);
+            var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
 
-            var transportInfrastructure = serverlessTransport.GetTransportInfrastructure(endpoint);
+            configuration.AddRegisteredServices(builder.Services);
+            builder.Services.AddNServiceBusEndpoint(configuration.EndpointConfiguration);
+
+            // Core loggers are designed to disable themselves but we want to make sure only the lambda loggers are active
+            builder.Logging.ClearProviders();
+            builder.Logging.AddLambdaLogger();
+
+            var host = builder.Build();
+            await host.StartAsync(cancellationToken).ConfigureAwait(false);
+
+            messageSession = host.Services.GetRequiredService<IMessageSession>();
+
+            var transportInfrastructure = serverlessTransport.GetTransportInfrastructure(messageSession);
             isSendOnly = transportInfrastructure.IsSendOnly;
 
             if (!isSendOnly)
@@ -116,7 +131,7 @@
         {
             await InitializeEndpointIfNecessary(lambdaContext, cancellationToken).ConfigureAwait(false);
 
-            await endpoint.Send(message, options, cancellationToken).ConfigureAwait(false);
+            await messageSession.Send(message, options, cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
@@ -129,7 +144,7 @@
             await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Send(messageConstructor, options, cancellationToken)
+            await messageSession.Send(messageConstructor, options, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -149,7 +164,7 @@
             await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Publish(message, options, cancellationToken)
+            await messageSession.Publish(message, options, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -159,7 +174,7 @@
             await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Publish(messageConstructor, options, cancellationToken)
+            await messageSession.Publish(messageConstructor, options, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -169,7 +184,7 @@
             await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Publish(message, cancellationToken)
+            await messageSession.Publish(message, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -179,7 +194,7 @@
             await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Publish(messageConstructor, cancellationToken)
+            await messageSession.Publish(messageConstructor, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -189,7 +204,7 @@
             await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Subscribe(eventType, options, cancellationToken)
+            await messageSession.Subscribe(eventType, options, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -199,7 +214,7 @@
             await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Subscribe(eventType, cancellationToken)
+            await messageSession.Subscribe(eventType, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -209,7 +224,7 @@
             await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Unsubscribe(eventType, options, cancellationToken)
+            await messageSession.Unsubscribe(eventType, options, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -219,7 +234,7 @@
             await InitializeEndpointIfNecessary(lambdaContext, cancellationToken)
                 .ConfigureAwait(false);
 
-            await endpoint.Unsubscribe(eventType, cancellationToken)
+            await messageSession.Unsubscribe(eventType, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -548,7 +563,7 @@
             TypeInfoResolver = TransportMessageSerializerContext.Default
         };
         IMessageProcessor pipeline;
-        IEndpointInstance endpoint;
+        IMessageSession messageSession;
         IAmazonSQS sqsClient;
         S3Settings s3Settings;
         string receiveQueueAddress;

@@ -16,6 +16,7 @@
     using Amazon.SQS.Model;
     using Amazon.SQS.Util;
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
     using NUnit.Framework;
 
     [TestFixture]
@@ -110,7 +111,7 @@
         protected AwsLambdaSQSEndpointConfiguration DefaultLambdaEndpointConfiguration<TTestContext>(TTestContext testContext, bool useXmlSerializer = false)
         {
             var configuration = DefaultLambdaEndpointConfiguration(useXmlSerializer);
-            configuration.AdvancedConfiguration.RegisterComponents(c => c.AddSingleton(typeof(TTestContext), testContext));
+            configuration.RegisterServices(services => services.AddSingleton(typeof(TTestContext), testContext));
             return configuration;
         }
 
@@ -160,15 +161,19 @@
             endpointConfiguration.UseSerialization<SystemJsonSerializer>();
             endpointConfiguration.UseTransport(transport);
 
-            var endpointInstance = await Endpoint.Start(endpointConfiguration)
-                .ConfigureAwait(false);
+            var builder = Host.CreateApplicationBuilder();
+            builder.Services.AddNServiceBusEndpoint(endpointConfiguration);
+            var host = builder.Build();
+
+            await host.StartAsync();
+            var messageSession = host.Services.GetRequiredService<IMessageSession>();
 
             for (var i = 0; i < count; i++)
             {
-                await endpointInstance.Send(QueueAddress, new T());
+                await messageSession.Send(QueueAddress, new T());
             }
 
-            await endpointInstance.Stop();
+            await host.StopAsync();
 
             await Task.Delay(30);
 

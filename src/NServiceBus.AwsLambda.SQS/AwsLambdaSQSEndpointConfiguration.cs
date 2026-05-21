@@ -1,11 +1,12 @@
 ﻿namespace NServiceBus
 {
     using System;
+    using System.Collections.Generic;
     using System.Threading.Tasks;
     using Amazon.SimpleNotificationService;
     using Amazon.SQS;
     using AwsLambda.SQS;
-    using NServiceBus.Logging;
+    using Microsoft.Extensions.DependencyInjection;
     using Serialization;
 
     /// <summary>
@@ -31,8 +32,6 @@
         public AwsLambdaSQSEndpointConfiguration(string endpointName, IAmazonSQS sqsClient, IAmazonSimpleNotificationService snsClient)
         {
             EndpointConfiguration = new EndpointConfiguration(endpointName);
-
-            LogManager.Use<LambdaLoggerDefinition>();
 
             recoverabilityPolicy.SendFailedMessagesToErrorQueue = true;
 
@@ -85,6 +84,19 @@
         public EndpointConfiguration AdvancedConfiguration => EndpointConfiguration;
 
         /// <summary>
+        /// Add dependencies to the <see cref="IServiceCollection">service collection</see>.
+        /// </summary>
+        public void RegisterServices(Action<IServiceCollection> registerServices) => serviceRegistrations.Add(registerServices);
+
+        internal void AddRegisteredServices(IServiceCollection services)
+        {
+            foreach (var serviceRegistration in serviceRegistrations)
+            {
+                serviceRegistration(services);
+            }
+        }
+
+        /// <summary>
         /// Define the serializer to be used.
         /// </summary>
         public SerializationExtensions<T> UseSerialization<T>() where T : SerializationDefinition, new()
@@ -95,5 +107,7 @@
         /// </summary>
         public void DoNotSendMessagesToErrorQueue()
             => recoverabilityPolicy.SendFailedMessagesToErrorQueue = false;
+
+        List<Action<IServiceCollection>> serviceRegistrations = [];
     }
 }
